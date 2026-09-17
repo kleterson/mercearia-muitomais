@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel de Entregas (Motoboy)</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+    body { padding: 20px; background: #1a1a2e; color: white; }
+    
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    
+    /* Botão do Dashboard */
+    .btn-dash { background: #e94560; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    
+    /* Painel Expansível (Dashboard Modal/Gaveta) */
+    #painel-historico { display: none; background: #16213e; border: 2px solid #e94560; border-radius: 10px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    
+    /* Cards de Resumo */
+    .dash-metrics { display: flex; gap: 15px; margin: 15px 0; }
+    .metric-card { flex: 1; background: #0f3460; padding: 15px; border-radius: 8px; text-align: center; }
+    .metric-card h3 { font-size: 14px; color: #aaa; margin-bottom: 5px; }
+    .metric-card p { font-size: 22px; font-weight: bold; color: #ff9900; }
+    
+    /* Cards de Pedidos */
+    .card { background: #16213e; border-left: 5px solid #e94560; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .card-historico { border-left-color: #28a745; background: #0f3460; }
+    
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; font-size: 15px; }
+    .btn-aceitar { background: #ff9900; color: #1a1a2e; }
+    .btn-caminho { background: #007bff; color: white; }
+    .btn-entregue { background: #28a745; color: white; }
+    .status-badge { background: #0f3460; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-top: 5px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <h1>🛵 Painel de Entregas</h1>
+    <button class="btn-dash" onclick="alternarHistorico()">📊 Histórico / Dash</button>
+  </div>
+
+  <!-- Janela Expansível do Histórico -->
+  <div id="painel-historico">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>📈 Dashboard & Histórico de Entregas</h2>
+      <button onclick="alternarHistorico()" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer;">✖</button>
+    </div>
+
+    <div class="dash-metrics">
+      <div class="metric-card">
+        <h3>Entregas Concluídas</h3>
+        <p id="total-entregas-qtd">0</p>
+      </div>
+      <div class="metric-card">
+        <h3>Total Faturado</h3>
+        <p>R$ <span id="total-entregas-valor">0.00</span></p>
+      </div>
+    </div>
+
+    <h3 style="margin-bottom: 10px; font-size: 16px; color: #ddd;">Lista de Pedidos Entregues:</h3>
+    <div id="lista-historico">Nenhuma entrega realizada ainda.</div>
+  </div>
+
+  <h2>Entregas Ativas</h2>
+  <div id="lista-pedidos" style="margin-top: 15px;"></div>
+
+  <script>
+    const socket = io();
+    let historicoVisivel = false;
+
+    function alternarHistorico() {
+      const painel = document.getElementById('painel-historico');
+      historicoVisivel = !historicoVisivel;
+      painel.style.display = historicoVisivel ? 'block' : 'none';
+      if (historicoVisivel) carregarHistorico();
+    }
+
+    async function carregarPedidos() {
+      const res = await fetch('/api/pedidos');
+      const pedidos = await res.json();
+      document.getElementById('lista-pedidos').innerHTML = '';
+      
+      const ativos = pedidos.filter(p => p.status !== 'Entregue' && p.status !== 'Aguardando Aprovação' && p.status !== 'Em Preparo / Aceito');
+      
+      if (ativos.length === 0) {
+        document.getElementById('lista-pedidos').innerHTML = '<p style="color:#aaa;">Nenhuma corrida pendente no momento.</p>';
+      } else {
+        ativos.reverse().forEach(p => renderizarCardAtivo(p));
+      }
+    }
+
+    async function carregarHistorico() {
+      const res = await fetch('/api/pedidos');
+      const pedidos = await res.json();
+      const entregues = pedidos.filter(p => p.status === 'Entregue');
+
+      document.getElementById('total-entregas-qtd').innerText = entregues.length;
+      
+      const totalGanha = entregues.reduce((acc, p) => acc + Number(p.total), 0);
+      document.getElementById('total-entregas-valor').innerText = totalGanha.toFixed(2);
+
+      const containerHistorico = document.getElementById('lista-historico');
+      if (entregues.length === 0) {
+        containerHistorico.innerHTML = '<p style="color:#aaa;">Nenhuma entrega concluída até o momento.</p>';
+      } else {
+        containerHistorico.innerHTML = entregues.reverse().map(p => `
+          <div class="card card-historico">
+            <h3>Pedido #${p.id} - ${p.cliente}</h3>
+            <p><strong>Endereço:</strong> ${p.endereco}</p>
+            <p><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
+            <div class="status-badge" style="background:#28a745; color:white;">Status: Entregue ✅</div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function renderizarCardAtivo(p) {
+      if (document.getElementById(`pedido-${p.id}`)) {
+        atualizarBotoes(p);
+        return;
+      }
+
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.id = `pedido-${p.id}`;
+
+      div.innerHTML = `
+        <h2>Pedido #${p.id}</h2>
+        <p><strong>Cliente:</strong> ${p.cliente}</p>
+        <p><strong>Endereço:</strong> ${p.endereco}</p>
+        <p><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
+        <div class="status-badge" id="badge-${p.id}">${p.status}</div>
+        <div id="acoes-${p.id}"></div>
+      `;
+
+      document.getElementById('lista-pedidos').prepend(div);
+      atualizarBotoes(p);
+    }
+
+    function atualizarBotoes(p) {
+      const containerAcoes = document.getElementById(`acoes-${p.id}`);
+      if (!containerAcoes) return;
+
+      const st = p.status.trim();
+
+      if (st === 'Aguardando Aceite do Motoboy') {
+        containerAcoes.innerHTML = `<button class="btn btn-aceitar" onclick="aceitarCorrida(${p.id})">Aceitar Corrida 🛵</button>`;
+      } 
+      else if (st === 'Motoboy Aceitou (Indo ao Comércio)' || st === 'A caminho do endereço') {
+        containerAcoes.innerHTML = `<button class="btn btn-caminho" onclick="iniciarEntrega(${p.id})">Coletar Pedido / Saiu para entregar 📦</button>`;
+      } 
+      else if (st.includes('Saiu para entregar') || st.includes('caminho do seu endereço')) {
+        containerAcoes.innerHTML = `<button class="btn btn-entregue" onclick="marcarEntregue(${p.id})">Marcar como Entregue ✅</button>`;
+      }
+    }
+
+    function aceitarCorrida(id) {
+      socket.emit('motoboy_aceitou', id);
+    }
+
+    function iniciarEntrega(id) {
+      socket.emit('motoboy_a_caminho', id);
+    }
+
+    function marcarEntregue(id) {
+      socket.emit('confirmar_entrega', id);
+    }
+
+    socket.on('pedido_disponivel_motoboy', (pedido) => {
+      carregarPedidos();
+    });
+
+    socket.on('status_atualizado', (p) => {
+      const badge = document.getElementById(`badge-${p.id}`);
+      if (badge) badge.innerText = p.status;
+
+      if (p.status === 'Entregue') {
+        const card = document.getElementById(`pedido-${p.id}`);
+        if (card) card.remove();
+        if (historicoVisivel) carregarHistorico();
+      } else {
+        atualizarBotoes(p);
+      }
+    });
+
+    carregarPedidos();
+  </script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Acesso ao Sistema</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #1a2332;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card-login {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      width: 320px;
+      text-align: center;
+    }
+    .card-login h2 {
+      margin-bottom: 20px;
+      color: #1a2332;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background-color: #0052a3;
+    }
+    a {
+      display: inline-block;
+      margin-top: 15px;
+      color: #0066cc;
+      text-decoration: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card-login">
+    <h2 id="titulo-form">Entrar no Site</h2>
+    <form id="form-auth" autocomplete="off">
+      <input type="text" id="usuario" placeholder="Nome de Usuário" autocomplete="off" required>
+      <input type="password" id="senha" placeholder="Sua Senha" autocomplete="new-password" required>
+      <button type="submit" id="btn-submit">Entrar</button>
+    </form>
+    <a id="toggle-modo">Não tem conta? Cadastre-se</a>
+  </div>
+
+  <script>
+    let modoCadastro = false;
+
+    const tituloForm = document.getElementById('titulo-form');
+    const btnSubmit = document.getElementById('btn-submit');
+    const toggleModo = document.getElementById('toggle-modo');
+    const formAuth = document.getElementById('form-auth');
+
+    // Alterna a interface entre Login e Cadastro
+    toggleModo.addEventListener('click', (e) => {
+      e.preventDefault();
+      modoCadastro = !modoCadastro;
+
+      if (modoCadastro) {
+        tituloForm.textContent = 'Cadastrar Conta';
+        btnSubmit.textContent = 'Cadastrar';
+        toggleModo.textContent = 'Já tem uma conta? Faça Login';
+      } else {
+        tituloForm.textContent = 'Entrar no Site';
+        btnSubmit.textContent = 'Entrar';
+        toggleModo.textContent = 'Não tem conta? Cadastre-se';
+      }
+    });
+
+    // Processa o envio do formulário
+    formAuth.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const usuario = document.getElementById('usuario').value;
+      const senha = document.getElementById('senha').value;
+
+      // Define a Rota de acordo com o modo ativo
+      const endpoint = modoCadastro ? '/api/cadastro' : '/api/login';
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario, senha })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          if (modoCadastro) {
+            alert('Cadastro realizado com sucesso! Agora você pode fazer login.');
+            toggleModo.click(); // Volta para a tela de login
+          } else {
+            alert('Login efetuado com sucesso!');
+            // Guarda o nome do usuário no navegador (opcional)
+            localStorage.setItem('usuarioLogado', usuario);
+            // Redireciona para a tela inicial
+            window.location.href = '/index.html';
+          }
+        } else {
+          alert(data.mensagem || 'Ocorreu um erro no servidor.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao conectar com o servidor.');
+      }
+    });
+  </script>
+
+</body>
+</html>

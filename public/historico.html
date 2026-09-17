@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Meu Histórico de Compras - Mercearia Express</title>
+  <style>
+    * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+    body { padding: 20px; background: #f4f6f9; color: #333; }
+
+    .header-bar { background: #1a1a2e; color: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .btn-voltar { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; }
+
+    .container { background: #ffffff; border: 2px solid #007bff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 800px; margin: 0 auto; }
+    .dash-metrics { display: flex; gap: 15px; margin: 20px 0; }
+    .metric-card { flex: 1; background: #e9ecef; padding: 15px; border-radius: 6px; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <h1>Mercearia Express</h1>
+    <a href="index.html" class="btn-voltar">⬅ Voltar ao Início</a>
+  </div>
+
+  <div class="container">
+    <h2>📊 Seu Histórico de Compras</h2>
+
+    <div class="dash-metrics">
+      <div class="metric-card">
+        <small>Total de Pedidos</small>
+        <h3 id="cli-qtd-pedidos">0</h3>
+      </div>
+      <div class="metric-card">
+        <small>Total Gasto</small>
+        <h3 style="color: #28a745;">R$ <span id="cli-total-gasto">0.00</span></h3>
+      </div>
+    </div>
+
+    <h4 style="margin-bottom: 15px;">Suas Compras Anteriores:</h4>
+    <div id="cli-lista-historico">Carregando histórico...</div>
+  </div>
+
+  <script>
+    // Verifica se o usuário está logado
+    const clienteLogado = localStorage.getItem('usuarioLogado');
+    if (!clienteLogado) {
+      window.location.href = 'login.html';
+    }
+
+    async function carregarHistorico() {
+      try {
+        const res = await fetch(`/api/pedidos?usuario=${clienteLogado}`);
+        if (res.ok) {
+          const meusPedidos = await res.json();
+          renderizarHistorico(meusPedidos);
+        } else {
+          renderizarHistorico([]);
+        }
+      } catch (err) {
+        console.error(err);
+        renderizarHistorico([]);
+      }
+    }
+
+    function renderizarHistorico(meusPedidos) {
+      document.getElementById('cli-qtd-pedidos').innerText = meusPedidos.length;
+
+      const totalGasto = meusPedidos.reduce((acc, p) => acc + Number(p.total), 0);
+      document.getElementById('cli-total-gasto').innerText = totalGasto.toFixed(2);
+
+      const container = document.getElementById('cli-lista-historico');
+      if (meusPedidos.length === 0) {
+        container.innerHTML = '<p style="color: #777;">Você ainda não possui histórico de compras.</p>';
+        return;
+      }
+
+      container.innerHTML = meusPedidos.slice().reverse().map(p => `
+        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-bottom: 12px; background: #f9f9f9;">
+          <strong>Pedido #${p.id}</strong> - <span style="color: #007bff; font-weight: bold;">${p.status || 'Pendente'}</span>
+          <p style="font-size: 13px; color: #555; margin: 6px 0;">Data: ${p.data || 'Hoje'}</p>
+          <p style="font-size: 14px;"><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
+        </div>
+      `).join('');
+    }
+
+    carregarHistorico();
+  </script>
+</body>
+</html>

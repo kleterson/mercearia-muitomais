@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Mercearia Express</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+    body { padding: 20px; background: #f4f6f9; color: #333; }
+
+    .header-bar { background: #1a1a2e; color: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    
+    .btn-dash { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-sair { background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+    /* Modal Dashboard Cliente */
+    #dash-cliente { display: none; background: #ffffff; border: 2px solid #007bff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .dash-metrics { display: flex; gap: 15px; margin: 15px 0; }
+    .metric-card { flex: 1; background: #e9ecef; padding: 12px; border-radius: 6px; text-align: center; }
+
+    .filtros { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .btn-filtro { background: #e0e0e0; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-filtro.ativo { background: #ff9900; color: white; }
+
+    .grid-produtos { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .card-produto { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; text-align: center; }
+    .card-produto img { width: 100%; height: 120px; object-fit: cover; border-radius: 6px; }
+    .badge-promo { background: #ff9900; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold; display: inline-block; margin-top: 4px; }
+
+    .btn-add { background: #28a745; color: white; border: none; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 8px; }
+
+    .box-status { background: #eef9f1; border: 1px solid #28a745; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .box-carrinho { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+    .input-campo { width: 100%; padding: 8px; margin: 5px 0 10px 0; border: 1px solid #ccc; border-radius: 4px; }
+    
+    .btn-remover-item { background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <h1>Mercearia Express</h1>
+    <div class="header-actions">
+      <button class="btn-dash" onclick="window.location.href='historico.html'">📊 Minhas Compras</button>
+      <button class="btn-sair" onclick="fazerLogout()">🚪 Sair</button>
+    </div>
+  </div>
+
+  <!-- Dashboard Modal / Gaveta do Cliente -->
+  <div id="dash-cliente">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2>📊 Seu Histórico de Compras</h2>
+      <button onclick="alternarDashCliente()" style="background: transparent; border: none; font-size: 20px; cursor: pointer;">✖</button>
+    </div>
+
+    <div class="dash-metrics">
+      <div class="metric-card">
+        <small>Total de Pedidos</small>
+        <h3 id="cli-qtd-pedidos">0</h3>
+      </div>
+      <div class="metric-card">
+        <small>Total Gasto</small>
+        <h3 style="color: #28a745;">R$ <span id="cli-total-gasto">0.00</span></h3>
+      </div>
+    </div>
+
+    <h4 style="margin-bottom: 10px;">Suas Compras Anteriores:</h4>
+    <div id="cli-lista-historico">Nenhuma compra realizada ainda.</div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filtros">
+    <button class="btn-filtro ativo" onclick="filtrar('todos', this)">Todos</button>
+    <button class="btn-filtro" onclick="filtrar('lacticinios', this)">Laticínios</button>
+    <button class="btn-filtro" onclick="filtrar('limpeza', this)">Limpeza</button>
+    <button class="btn-filtro" onclick="filtrar('mercearia', this)">Mercearia</button>
+    <button class="btn-filtro" onclick="filtrar('feira', this)">Feira</button>
+  </div>
+
+  <!-- Produtos -->
+  <div class="grid-produtos" id="grade-produtos"></div>
+
+  <!-- Status do Pedido Atual -->
+  <div class="box-status" id="box-status" style="display: none;">
+    <h3>🛵 Status do Seu Pedido</h3>
+    <p><strong id="status-pedido-id">Pedido #--</strong></p>
+    <p>Status Atual: <span id="status-pedido-texto" style="color: #ff9900; font-weight: bold;">--</span></p>
+  </div>
+
+  <!-- Carrinho de Compras -->
+  <div class="box-carrinho">
+    <h2>Seu Carrinho</h2>
+    <div id="itens-carrinho" style="margin: 10px 0;"><p style="color: #777;">Carrinho vazio</p></div>
+    <p style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Total: R$ <span id="total-carrinho">0.00</span></p>
+
+    <label>Seu Nome:</label>
+    <input type="text" id="nome-cliente" class="input-campo" placeholder="Ex: Maria">
+
+    <label>Endereço de Entrega:</label>
+    <input type="text" id="endereco-cliente" class="input-campo" placeholder="Ex: Rua das Flores, 123">
+
+    <button class="btn-add" style="background: #007bff; font-size: 16px;" onclick="finalizarPedido()">Finalizar Pedido</button>
+  </div>
+
+  <script>
+    // Verificação de autenticação: se não houver usuário no localStorage, redireciona para login
+    let clienteLogado = localStorage.getItem('usuarioLogado');
+    if (!clienteLogado) {
+      window.location.href = 'login.html';
+    }
+
+    const socket = typeof io !== 'undefined' ? io() : null;
+    let listaProdutos = [];
+    let carrinho = [];
+
+    document.getElementById('nome-cliente').value = clienteLogado || '';
+
+    async function carregarProdutos() {
+      try {
+        const res = await fetch('/api/produtos');
+        if (res.ok) {
+          listaProdutos = await res.json();
+        } else {
+          listaProdutos = obterProdutosExemplo();
+        }
+      } catch (err) {
+        console.warn('API de produtos indisponível, usando lista local de demonstração.');
+        listaProdutos = obterProdutosExemplo();
+      }
+      renderizarProdutos(listaProdutos);
+    }
+
+    function obterProdutosExemplo() {
+      return [
+        { id: 1, nome: 'Leite Integral 1L', categoria: 'lacticinios', preco: 4.80, foto: 'https://via.placeholder.com/150', obs: 'Marca Boralact' },
+        { id: 2, nome: 'Queijo Mussarela 200g', categoria: 'lacticinios', preco: 12.50, foto: 'https://via.placeholder.com/150', promocao: true },
+        { id: 3, nome: 'Detergente Neutro 500ml', categoria: 'limpeza', preco: 2.30, foto: 'https://via.placeholder.com/150' },
+        { id: 4, nome: 'Arroz Tipo 1 - 5kg', categoria: 'mercearia', preco: 24.90, foto: 'https://via.placeholder.com/150' },
+        { id: 5, nome: 'Banana Prata 1kg', categoria: 'feira', preco: 6.99, foto: 'https://via.placeholder.com/150', promocao: true }
+      ];
+    }
+
+    function renderizarProdutos(lista) {
+      const container = document.getElementById('grade-produtos');
+      if (!lista || lista.length === 0) {
+        container.innerHTML = '<p style="grid-column: 1/-1;">Nenhum produto encontrado nesta categoria.</p>';
+        return;
+      }
+
+      container.innerHTML = lista.map(p => `
+        <div class="card-produto">
+          <img src="${p.foto || 'https://via.placeholder.com/150'}" alt="${p.nome}">
+          <h3 style="font-size: 16px; margin-top: 6px;">${p.nome}</h3>
+          <p style="font-size: 12px; color: #666;">${p.obs || ''}</p>
+          <p style="font-size: 16px; font-weight: bold; margin: 5px 0;">R$ ${Number(p.preco).toFixed(2)}</p>
+          ${p.promocao ? '<span class="badge-promo">PROMOÇÃO</span>' : ''}
+          <button class="btn-add" onclick="adicionarCarrino(${p.id})">Adicionar</button>
+        </div>
+      `).join('');
+    }
+
+    function filtrar(cat, btnElement) {
+      // Atualiza classe de botão ativo
+      if (btnElement) {
+        document.querySelectorAll('.btn-filtro').forEach(btn => btn.classList.remove('ativo'));
+        btnElement.classList.add('ativo');
+      }
+
+      if (cat === 'todos') {
+        renderizarProdutos(listaProdutos);
+      } else {
+        renderizarProdutos(listaProdutos.filter(p => p.categoria === cat));
+      }
+    }
+
+    function adicionarCarrino(id) {
+      const p = listaProdutos.find(item => item.id === id);
+      if (p) {
+        carrinho.push(p);
+        atualizarCarrinho();
+      }
+    }
+
+    function removerDoCarrinho(index) {
+      carrinho.splice(index, 1);
+      atualizarCarrinho();
+    }
+
+    function atualizarCarrinho() {
+      const container = document.getElementById('itens-carrinho');
+      if (carrinho.length === 0) {
+        container.innerHTML = '<p style="color: #777;">Carrinho vazio</p>';
+        document.getElementById('total-carrinho').innerText = '0.00';
+        return;
+      }
+
+      container.innerHTML = carrinho.map((p, index) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border-bottom: 1px #eee solid; padding-bottom: 4px;">
+          <span>${p.nome}</span>
+          <div>
+            <span style="font-weight: bold; margin-right: 8px;">R$ ${Number(p.preco).toFixed(2)}</span>
+            <button class="btn-remover-item" onclick="removerDoCarrinho(${index})">✕</button>
+          </div>
+        </div>
+      `).join('');
+
+      const total = carrinho.reduce((acc, p) => acc + Number(p.preco), 0);
+      document.getElementById('total-carrinho').innerText = total.toFixed(2);
+    }
+
+    function finalizarPedido() {
+      const cliente = document.getElementById('nome-cliente').value.trim();
+      const endereco = document.getElementById('endereco-cliente').value.trim();
+
+      if (!cliente || !endereco || carrinho.length === 0) {
+        alert('Preencha seu nome, endereço e adicione itens ao carrinho!');
+        return;
+      }
+
+      localStorage.setItem('usuarioLogado', cliente);
+      clienteLogado = cliente;
+
+      const total = carrinho.reduce((acc, p) => acc + Number(p.preco), 0);
+
+      const dados = {
+        cliente: cliente,
+        usuario: clienteLogado,
+        endereco: endereco,
+        itens: carrinho,
+        total: total
+      };
+
+      if (socket) {
+        socket.emit('novo_pedido', dados);
+      } else {
+        console.log('Pedido para envio:', dados);
+      }
+
+      alert('Pedido enviado com sucesso!');
+      carrinho = [];
+      atualizarCarrinho();
+    }
+
+    function alternarDashCliente() {
+      const dash = document.getElementById('dash-cliente');
+      const visivel = dash.style.display === 'block';
+      dash.style.display = visivel ? 'none' : 'block';
+      if (!visivel) carregarHistoricoCliente();
+    }
+
+    async function carregarHistoricoCliente() {
+      const user = document.getElementById('nome-cliente').value.trim() || clienteLogado;
+      try {
+        const res = await fetch(`/api/pedidos?usuario=${user}`);
+        if (res.ok) {
+          const meusPedidos = await res.json();
+          renderizarHistorico(meusPedidos);
+        } else {
+          renderizarHistorico([]);
+        }
+      } catch (err) {
+        renderizarHistorico([]);
+      }
+    }
+
+    function renderizarHistorico(meusPedidos) {
+      document.getElementById('cli-qtd-pedidos').innerText = meusPedidos.length;
+
+      const totalGasto = meusPedidos.reduce((acc, p) => acc + Number(p.total), 0);
+      document.getElementById('cli-total-gasto').innerText = totalGasto.toFixed(2);
+
+      const container = document.getElementById('cli-lista-historico');
+      if (meusPedidos.length === 0) {
+        container.innerHTML = '<p style="color: #777;">Você ainda não possui histórico de compras.</p>';
+        return;
+      }
+
+      container.innerHTML = meusPedidos.slice().reverse().map(p => `
+        <div style="border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 10px; background: #f9f9f9;">
+          <strong>Pedido #${p.id}</strong> - <span style="color: #007bff; font-weight: bold;">${p.status || 'Pendente'}</span>
+          <p style="font-size: 13px; color: #555; margin: 4px 0;">Data: ${p.data || 'Hoje'}</p>
+          <p style="font-size: 14px;"><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
+        </div>
+      `).join('');
+    }
+
+    function fazerLogout() {
+      localStorage.removeItem('usuarioLogado');
+      window.location.href = 'login.html';
+    }
+
+    if (socket) {
+      socket.on('status_atualizado', (pedido) => {
+        document.getElementById('box-status').style.display = 'block';
+        document.getElementById('status-pedido-id').innerText = `Pedido #${pedido.id}`;
+        document.getElementById('status-pedido-texto').innerText = pedido.status;
+      });
+    }
+
+    carregarProdutos();
+  </script>
+</body>
+</html>

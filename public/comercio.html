@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel do Comércio - Gestão e Pedidos</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #eef2f5; }
+    .container { display: flex; gap: 20px; }
+    .box { background: white; padding: 20px; border-radius: 8px; flex: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    input, select, button { width: 100%; padding: 8px; margin-top: 8px; }
+    button { background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .pedido-card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: white; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="box">
+      <h2>Cadastrar / Gerenciar Produtos</h2>
+      <form id="form-produto">
+        <input type="text" id="nome" placeholder="Nome do Item" required>
+        <select id="categoria">
+          <option value="lacticinios">Laticínios</option>
+          <option value="limpeza">Limpeza</option>
+          <option value="mercearia">Mercearia</option>
+          <option value="feira">Feira</option>
+        </select>
+        <input type="number" step="0.01" id="preco" placeholder="Preço (R$)" required>
+        <input type="url" id="foto" placeholder="URL da Imagem (Google Images)" required>
+        <input type="text" id="obs" placeholder="Observação do produto">
+        <label style="display: block; margin-top: 10px;">
+          <input type="checkbox" id="promocao" style="width: auto;"> Marcar como Promoção?
+        </label>
+        <button type="submit">Adicionar Produto</button>
+      </form>
+    </div>
+
+    <div class="box">
+      <h2>Pedidos Recebidos</h2>
+      <div id="lista-pedidos"></div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    async function carregarPedidos() {
+      const res = await fetch('/api/pedidos');
+      const pedidos = await res.json();
+      document.getElementById('lista-pedidos').innerHTML = '';
+      pedidos.reverse().forEach(p => renderizarPedido(p));
+    }
+
+    document.getElementById('form-produto').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const dados = {
+        nome: document.getElementById('nome').value,
+        categoria: document.getElementById('categoria').value,
+        preco: document.getElementById('preco').value,
+        foto: document.getElementById('foto').value,
+        obs: document.getElementById('obs').value,
+        promocao: document.getElementById('promocao').checked
+      };
+
+      await fetch('/api/produtos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      });
+
+      alert('Produto cadastrado com sucesso!');
+      e.target.reset();
+    });
+
+    socket.on('pedido_recebido_comercio', (pedido) => {
+      renderizarPedido(pedido);
+    });
+
+    function renderizarPedido(p) {
+      const container = document.getElementById('lista-pedidos');
+
+      // Regras de bloqueio e liberação de botões
+      const podeAceitar = p.status === 'Aguardando Aprovação';
+      const podeLancar = p.status === 'Em Preparo / Aceito';
+      const foiEntregue = p.status === 'Entregue';
+
+      // Cria o elemento se ele não existir, ou reutiliza o existente
+      let div = document.getElementById(`pedido-${p.id}`);
+      if (!div) {
+        div = document.createElement('div');
+        div.id = `pedido-${p.id}`;
+        div.className = 'pedido-card';
+        container.prepend(div);
+      }
+
+      div.innerHTML = `
+        <h3>Pedido #${p.id} - ${p.cliente}</h3>
+        <p><strong>Endereço:</strong> ${p.endereco}</p>
+        <p><strong>Total:</strong> R$ ${Number(p.total).toFixed(2)}</p>
+        <p><strong>Status:</strong> <span style="font-weight: bold; color: ${foiEntregue ? '#28a745' : '#ff9900'};">${p.status}</span></p>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+          <!-- Botão Aceitar -->
+          <button 
+            onclick="aceitar(${p.id})" 
+            ${!podeAceitar ? 'disabled' : ''} 
+            style="background: ${podeAceitar ? '#28a745' : '#6c757d'}; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: ${podeAceitar ? 'pointer' : 'not-allowed'}; opacity: ${podeAceitar ? '1' : '0.6'};">
+            ${podeAceitar ? 'Aceitar / Confirmar Pedido ✅' : 'Pedido Já Aceito ✅'}
+          </button>
+
+          <!-- Botão Lançar -->
+          <button 
+            onclick="despachar(${p.id})" 
+            ${!podeLancar ? 'disabled' : ''} 
+            style="background: ${podeLancar ? '#007bff' : '#6c757d'}; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: ${podeLancar ? 'pointer' : 'not-allowed'}; opacity: ${podeLancar ? '1' : '0.6'};">
+            ${foiEntregue ? 'Finalizado (Entregue) 🏁' : (podeLancar ? 'Lançar para o Motoboy 🛵' : 'Já Lançado ao Motoboy 🛵')}
+          </button>
+        </div>
+      `;
+    }
+
+    function aceitar(id) {
+      socket.emit('aceitar_pedido', id);
+    }
+
+    function despachar(id) {
+      socket.emit('despachar_motoboy', id);
+    }
+
+    // Atualiza o card completo em tempo real quando o status mudar via Socket
+    socket.on('status_atualizado', (p) => {
+      renderizarPedido(p);
+    });
+
+    carregarPedidos();
+  </script>
+</body>
+</html>

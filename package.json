@@ -1,0 +1,25 @@
+{
+  "name": "sistema-delivery-mercearia",
+  "version": "1.0.0",
+  "description": "Sistema de delivery integrado (Cliente, Comércio, Motoboy)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^4.22.3",
+    "nodemailer": "^10.0.10",
+    "postgres": "^3.4.9",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
