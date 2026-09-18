@@ -2,25 +2,21 @@
 <html lang="pt-BR">
 <head>
     <link rel="manifest" href="manifest.json">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<!-- Informa ao celular que o site deve se comportar como aplicativo -->
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta charset="UTF-8">
-
-
-  <title>Painel do Comércio - Gestão e Pedidos</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; background: #eef2f5; }
-    .container { display: flex; gap: 20px; }
-    .box { background: white; padding: 20px; border-radius: 8px; flex: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    input, select, button { width: 100%; padding: 8px; margin-top: 8px; }
-    button { background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    .pedido-card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: white; }
-  </style>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta charset="UTF-8">
+    <title>Painel do Comércio - Gestão e Pedidos</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      body { font-family: sans-serif; padding: 20px; background: #eef2f5; }
+      .container { display: flex; gap: 20px; }
+      .box { background: white; padding: 20px; border-radius: 8px; flex: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      input, select, button { width: 100%; padding: 8px; margin-top: 8px; }
+      button { background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+      .pedido-card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: white; }
+    </style>
 </head>
 <body>
 
@@ -89,16 +85,17 @@
     function renderizarPedido(p) {
       const container = document.getElementById('lista-pedidos');
 
+      // Verifica se o pedido foi cancelado pelo cliente
+      const cancelado = p.status === 'Cancelado pelo Cliente';
+
       // Regras de bloqueio e liberação de botões
-      const podeAceitar = p.status === 'Aguardando Aprovação';
-      const podeLancar = p.status === 'Em Preparo / Aceito';
+      const podeAceitar = !cancelado && p.status === 'Aguardando Aprovação';
+      const podeLancar = !cancelado && p.status === 'Em Preparo / Aceito';
       const foiEntregue = p.status === 'Entregue';
 
-      // Tratamento para exibir pagamento e troco
       const formaPag = p.pagamento || p.formaPagamento || 'Não especificado';
-      const infoTroco = p.troco ? ` - Troco para: ${p.troco}` : '';
+      const infoTroco = p.troco ? ` (${p.troco})` : '';
 
-      // Cria o elemento se ele não existir, ou reutiliza o existente
       let div = document.getElementById(`pedido-${p.id}`);
       if (!div) {
         div = document.createElement('div');
@@ -107,28 +104,33 @@
         container.prepend(div);
       }
 
+      // Cor do status: vermelho se cancelado, verde se entregue, laranja se pendente/andamento
+      let corStatus = '#ff9900';
+      if (cancelado) corStatus = '#dc3545';
+      else if (foiEntregue) corStatus = '#28a745';
+
       div.innerHTML = `
         <h3>Pedido #${p.id} - ${p.cliente}</h3>
         <p><strong>Endereço:</strong> ${p.endereco}</p>
         <p><strong>Total:</strong> R$ ${Number(p.total).toFixed(2)}</p>
         <p><strong>Pagamento:</strong> <span style="color: #ff9900; font-weight: bold;">${formaPag}${infoTroco}</span></p>
-        <p><strong>Status:</strong> <span style="font-weight: bold; color: ${foiEntregue ? '#28a745' : '#ff9900'};">${p.status}</span></p>
+        <p><strong>Status:</strong> <span style="font-weight: bold; color: ${corStatus};">${p.status}</span></p>
 
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
           <!-- Botão Aceitar -->
           <button 
             onclick="aceitar(${p.id})" 
             ${!podeAceitar ? 'disabled' : ''} 
-            style="background: ${podeAceitar ? '#28a745' : '#6c757d'}; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: ${podeAceitar ? 'pointer' : 'not-allowed'}; opacity: ${podeAceitar ? '1' : '0.6'};">
-            ${podeAceitar ? 'Aceitar / Confirmar Pedido ✅' : 'Pedido Já Aceito ✅'}
+            style="background: ${cancelado ? '#dc3545' : (podeAceitar ? '#28a745' : '#6c757d')}; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: ${podeAceitar ? 'pointer' : 'not-allowed'}; opacity: ${podeAceitar ? '1' : '0.6'};">
+            ${cancelado ? 'Cancelado pelo Cliente ❌' : (podeAceitar ? 'Aceitar / Confirmar Pedido ✅' : 'Pedido Já Aceito ✅')}
           </button>
 
           <!-- Botão Lançar -->
           <button 
             onclick="despachar(${p.id})" 
             ${!podeLancar ? 'disabled' : ''} 
-            style="background: ${podeLancar ? '#007bff' : '#6c757d'}; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: ${podeLancar ? 'pointer' : 'not-allowed'}; opacity: ${podeLancar ? '1' : '0.6'};">
-            ${foiEntregue ? 'Finalizado (Entregue) 🏁' : (podeLancar ? 'Lançar para o Motoboy 🛵' : 'Já Lançado ao Motoboy 🛵')}
+            style="background: ${cancelado ? '#6c757d' : (podeLancar ? '#007bff' : '#6c757d')}; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: ${podeLancar ? 'pointer' : 'not-allowed'}; opacity: ${podeLancar ? '1' : '0.6'};">
+            ${cancelado ? 'Indisponível (Cancelado)' : (foiEntregue ? 'Finalizado (Entregue) 🏁' : (podeLancar ? 'Lançar para o Motoboy 🛵' : 'Já Lançado ao Motoboy 🛵'))}
           </button>
         </div>
       `;
@@ -142,7 +144,6 @@
       socket.emit('despachar_motoboy', id);
     }
 
-    // Atualiza o card completo em tempo real quando o status mudar via Socket
     socket.on('status_atualizado', (p) => {
       renderizarPedido(p);
     });

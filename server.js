@@ -144,6 +144,18 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Salva qualquer alteração de status (incluindo o cancelamento do cliente) no banco
+  socket.on('atualizar_status_pedido', async (dados) => {
+    try {
+      const [p] = await sql`UPDATE pedidos SET status = ${dados.status} WHERE id = ${dados.id} RETURNING *`;
+      if (p) {
+        io.emit('status_atualizado', p);
+      }
+    } catch (err) { 
+      console.error('Erro ao atualizar status do pedido:', err); 
+    }
+  });
+
   socket.on('aceitar_pedido', async (pedidoId) => {
     try {
       const [p] = await sql`UPDATE pedidos SET status = 'Em Preparo / Aceito' WHERE id = ${pedidoId} RETURNING *`;

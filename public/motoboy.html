@@ -23,8 +23,8 @@
     #painel-historico { display: none; background: #16213e; border: 2px solid #e94560; border-radius: 10px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
     
     /* Cards de Resumo */
-    .dash-metrics { display: flex; gap: 15px; margin: 15px 0; }
-    .metric-card { flex: 1; background: #0f3460; padding: 15px; border-radius: 8px; text-align: center; }
+    .dash-metrics { display: flex; justify-content: center; margin: 15px 0; }
+    .metric-card { width: 100%; max-width: 400px; background: #0f3460; padding: 15px; border-radius: 8px; text-align: center; }
     .metric-card h3 { font-size: 14px; color: #aaa; margin-bottom: 5px; }
     .metric-card p { font-size: 22px; font-weight: bold; color: #ff9900; }
     
@@ -57,10 +57,6 @@
       <div class="metric-card">
         <h3>Entregas Concluídas</h3>
         <p id="total-entregas-qtd">0</p>
-      </div>
-      <div class="metric-card">
-        <h3>Total Faturado</h3>
-        <p>R$ <span id="total-entregas-valor">0.00</span></p>
       </div>
     </div>
 
@@ -102,9 +98,6 @@
       const entregues = pedidos.filter(p => p.status === 'Entregue');
 
       document.getElementById('total-entregas-qtd').innerText = entregues.length;
-      
-      const totalGanha = entregues.reduce((acc, p) => acc + Number(p.total), 0);
-      document.getElementById('total-entregas-valor').innerText = totalGanha.toFixed(2);
 
       const containerHistorico = document.getElementById('lista-historico');
       if (entregues.length === 0) {

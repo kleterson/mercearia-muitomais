@@ -121,6 +121,27 @@
     <div id="cli-lista-historico">Nenhuma compra realizada ainda.</div>
   </div>
 
+  <!-- Status do Pedido Atual (Sempre no topo quando ativo) -->
+  <div class="box-status" id="box-status" style="display: none;">
+    <h3>🛵 Status do Seu Pedido</h3>
+    <p><strong id="status-pedido-id">Pedido #--</strong></p>
+    <p>Status Atual: <span id="status-pedido-texto" style="color: #ff9900; font-weight: bold;">--</span></p>
+    <button id="btn-cancelar-pedido" onclick="tentarCancelarPedido()" style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%;">Cancelar Pedido ❌</button>
+  </div>
+
+  <!-- Modal do Bot de Cancelamento -->
+  <div class="modal-carrinho" id="modal-bot-cancelar" style="display: none;">
+    <div class="conteudo-modal">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h2>Assistente Virtual 🤖</h2>
+        <button onclick="fecharBotCancelar()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+      <div id="conteudo-bot-chat" style="font-size: 14px; line-height: 1.5; color: #333;">
+        <!-- Mensagens injetadas dinamicamente -->
+      </div>
+    </div>
+  </div>
+
   <!-- Filtros -->
   <div class="filtros">
     <button class="btn-filtro ativo" onclick="filtrar('todos', this)">Todos</button>
@@ -132,13 +153,6 @@
 
   <!-- Produtos -->
   <div class="grid-produtos" id="grade-produtos"></div>
-
-  <!-- Status do Pedido Atual -->
-  <div class="box-status" id="box-status" style="display: none;">
-    <h3>🛵 Status do Seu Pedido</h3>
-    <p><strong id="status-pedido-id">Pedido #--</strong></p>
-    <p>Status Atual: <span id="status-pedido-texto" style="color: #ff9900; font-weight: bold;">--</span></p>
-  </div>
 
   <!-- Botão Flutuante do Carrinho -->
 <div class="carrinho-flutuante" id="btn-abrir-carrinho" onclick="toggleCarrinho()">
@@ -183,6 +197,9 @@
 </div>
 
   <script>
+    // Variável para guardar o status atual do pedido ativo do cliente
+    let statusPedidoAtual = '';
+
     // Função para abrir e fechar o painel do carrinho
     function toggleCarrinho() {
       const painel = document.getElementById('painel-carrinho');
@@ -213,6 +230,127 @@
     let carrinho = [];
 
     document.getElementById('nome-cliente').value = clienteLogado || '';
+
+    // Função para buscar o pedido mais recente do usuário e manter o status na tela
+    async function verificarPedidoAtivo() {
+      const user = document.getElementById('nome-cliente').value.trim() || clienteLogado;
+      try {
+        const res = await fetch(`/api/pedidos?usuario=${user}`);
+        if (res.ok) {
+          const meusPedidos = await res.json();
+          if (meusPedidos.length > 0) {
+            const ultimoPedido = meusPedidos.sort((a, b) => b.id - a.id)[0];
+            statusPedidoAtual = ultimoPedido.status;
+            
+            // Só exibe a caixa de status se o pedido não estiver Entregue e nem Cancelado pelo Cliente
+            if (ultimoPedido.status !== 'Entregue' && ultimoPedido.status !== 'Cancelado pelo Cliente') {
+              document.getElementById('box-status').style.display = 'block';
+              document.getElementById('status-pedido-id').innerText = `Pedido #${ultimoPedido.id}`;
+              document.getElementById('status-pedido-texto').innerText = ultimoPedido.status;
+            } else {
+              document.getElementById('box-status').style.display = 'none';
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao verificar pedido ativo', err);
+      }
+    }
+
+    // Lógica do Bot de Cancelamento
+    function tentarCancelarPedido() {
+      const modal = document.getElementById('modal-bot-cancelar');
+      const chatBox = document.getElementById('conteudo-bot-chat');
+      modal.style.display = 'flex';
+
+      // Se o comércio já aceitou (diferente de 'Aguardando Aprovação')
+      if (statusPedidoAtual && statusPedidoAtual !== 'Aguardando Aprovação') {
+        chatBox.innerHTML = `
+          <p style="background: #f1f1f1; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+            Olá sou assistente virtual 🤖, infelizmente não dá para cancelar, o restaurante já aceitou seu pedido.
+          </p>
+          <button onclick="fecharBotCancelar()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; width: 100%; cursor: pointer; font-weight: bold;">Entendido</button>
+        `;
+      } else {
+        // Se ainda estiver aguardando aprovação
+        chatBox.innerHTML = `
+          <p style="background: #f1f1f1; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+            Olá sou assistente virtual 🤖, qual motivo do cancelamento, escolha a opção abaixo:
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+            <button onclick="escolherMotivoCancelamento(1)" style="background: #e9ecef; border: 1px solid #ccc; padding: 8px; border-radius: 5px; text-align: left; cursor: pointer;">1 - Comprei sem querer</button>
+            <button onclick="escolherMotivoCancelamento(2)" style="background: #e9ecef; border: 1px solid #ccc; padding: 8px; border-radius: 5px; text-align: left; cursor: pointer;">2 - Não reconheço essa compra</button>
+            <button onclick="escolherMotivoCancelamento(3)" style="background: #e9ecef; border: 1px solid #ccc; padding: 8px; border-radius: 5px; text-align: left; cursor: pointer;">3 - Prefiro ir até o local</button>
+          </div>
+        `;
+      }
+    }
+
+    function escolherMotivoCancelamento(opcao) {
+      const user = document.getElementById('nome-cliente').value.trim() || clienteLogado;
+      
+      // Envia a alteração de status para o servidor salvar no banco de dados
+      fetch(`/api/pedidos?usuario=${user}`)
+        .then(res => res.json())
+        .then(pedidos => {
+          const ultimo = pedidos.sort((a, b) => b.id - a.id)[0];
+          if (ultimo && socket) {
+            socket.emit('atualizar_status_pedido', { id: ultimo.id, status: 'Cancelado pelo Cliente' });
+          }
+        });
+
+      const chatBox = document.getElementById('conteudo-bot-chat');
+      chatBox.innerHTML = `
+        <p style="background: #f1f1f1; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+          Sua compra foi cancelada com sucesso ✅
+        </p>
+        <p style="background: #f1f1f1; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+          Por favor, avalie o atendimento com estrelinha de 0 a 5 ⭐:
+        </p>
+        <div style="display: flex; justify-content: center; gap: 5px; margin-bottom: 15px;">
+          <button onclick="avaliarAtendimento(0)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">0</button>
+          <button onclick="avaliarAtendimento(1)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">1</button>
+          <button onclick="avaliarAtendimento(2)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">2</button>
+          <button onclick="avaliarAtendimento(3)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">3</button>
+          <button onclick="avaliarAtendimento(4)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">4</button>
+          <button onclick="avaliarAtendimento(5)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">5</button>
+        </div>
+      `;
+      // Esconde o painel de status pois foi cancelado permanentemente
+      document.getElementById('box-status').style.display = 'none';
+      statusPedidoAtual = 'Cancelado pelo Cliente';
+    }
+
+    function avaliarAtendimento(nota) {
+      const chatBox = document.getElementById('conteudo-bot-chat');
+      if (nota === 5) {
+        chatBox.innerHTML = `
+          <p style="background: #eef9f1; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; color: #28a745;">
+            Obrigado pelo feedback volte sempre 😊
+          </p>
+          <button onclick="fecharBotCancelar()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; width: 100%; cursor: pointer; font-weight: bold;">Fechar</button>
+        `;
+      } else if (nota >= 0 && nota <= 2) {
+        chatBox.innerHTML = `
+          <p style="background: #fdf2f2; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; color: #dc3545;">
+            Obrigado pelo atendimento, desculpa o transtorno 😢 e volte sempre.
+          </p>
+          <button onclick="fecharBotCancelar()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; width: 100%; cursor: pointer; font-weight: bold;">Fechar</button>
+        `;
+      } else {
+        // Notas 3 e 4 por segurança seguem uma mensagem padrão amigável
+        chatBox.innerHTML = `
+          <p style="background: #f1f1f1; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold;">
+            Obrigado pela avaliação! Volte sempre 🙂
+          </p>
+          <button onclick="fecharBotCancelar()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; width: 100%; cursor: pointer; font-weight: bold;">Fechar</button>
+        `;
+      }
+    }
+
+    function fecharBotCancelar() {
+      document.getElementById('modal-bot-cancelar').style.display = 'none';
+    }
 
     async function carregarProdutos() {
       try {
@@ -287,7 +425,6 @@
     function atualizarCarrinho() {
       const container = document.getElementById('itens-carrinho');
       
-      // 1. Atualiza contador e totais na tela (Botão Flutuante e Modal)
       document.getElementById('contador-carrinho').innerText = carrinho.length;
       const total = carrinho.reduce((acc, p) => acc + Number(p.preco), 0);
       document.getElementById('total-carrinho').innerText = total.toFixed(2);
@@ -356,6 +493,7 @@
       carrinho = [];
       atualizarCarrinho();
       toggleCarrinho();
+      verificarPedidoAtivo();
     }
 
     function alternarDashCliente() {
@@ -408,13 +546,24 @@
 
     if (socket) {
       socket.on('status_atualizado', (pedido) => {
-        document.getElementById('box-status').style.display = 'block';
-        document.getElementById('status-pedido-id').innerText = `Pedido #${pedido.id}`;
-        document.getElementById('status-pedido-texto').innerText = pedido.status;
+        const user = document.getElementById('nome-cliente').value.trim() || clienteLogado;
+        if (pedido.usuario && pedido.usuario.toLowerCase() === user.toLowerCase()) {
+          statusPedidoAtual = pedido.status;
+          const boxStatus = document.getElementById('box-status');
+          if (pedido.status === 'Entregue' || pedido.status === 'Cancelado pelo Cliente') {
+            boxStatus.style.display = 'none';
+          } else {
+            boxStatus.style.display = 'block';
+            document.getElementById('status-pedido-id').innerText = `Pedido #${pedido.id}`;
+            document.getElementById('status-pedido-texto').innerText = pedido.status;
+          }
+        }
       });
     }
 
+    // Inicialização ao carregar a página
     carregarProdutos();
+    verificarPedidoAtivo();
   </script>
 </body>
 </html>
