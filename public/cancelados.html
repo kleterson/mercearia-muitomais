@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <title>Pedidos Cancelados</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+        body { padding: 20px; background: #1a1a2e; color: white; }
+        
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        /* Botão Voltar */
+        .btn-voltar { background: #4e5d6c; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-voltar:hover { background: #3b4854; }
+
+        /* Cards de Pedidos Cancelados */
+        .card { background: #16213e; border-left: 5px solid #dc3545; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .status-badge { background: #dc3545; color: white; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-top: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <h1>❌ Pedidos Cancelados</h1>
+    <a href="motoboy.html" class="btn-voltar">⬅ Voltar ao Painel</a>
+  </div>
+
+  <div id="lista-cancelados" style="margin-top: 15px;">
+    <p style="color:#aaa;">Carregando pedidos cancelados...</p>
+  </div>
+
+  <script>
+    const socket = io();
+
+    async function carregarCancelados() {
+      try {
+        const res = await fetch('/api/pedidos');
+        const pedidos = await res.json();
+        
+        // Filtra apenas os pedidos que possuem status de cancelado
+        const cancelados = pedidos.filter(p => p.status === 'Cancelado pelo Cliente');
+        
+        const container = document.getElementById('lista-cancelados');
+        container.innerHTML = '';
+        
+        if (cancelados.length === 0) {
+          container.innerHTML = '<p style="color:#aaa;">Nenhum pedido cancelado no momento.</p>';
+        } else {
+          cancelados.reverse().forEach(p => {
+            const formaPag = p.pagamento || p.formaPagamento || 'Não especificado';
+            const infoTroco = p.troco ? ` - Troco: ${p.troco}` : '';
+            
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `
+              <h2>Pedido #${p.id}</h2>
+              <p><strong>Cliente:</strong> ${p.cliente}</p>
+              <p><strong>Endereço:</strong> ${p.endereco}</p>
+              <p><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
+              <p><strong>Pagamento:</strong> <span style="color: #ff9900; font-weight: bold;">${formaPag}${infoTroco}</span></p>
+              <div class="status-badge">${p.status}</div>
+            `;
+            container.appendChild(div);
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao carregar cancelados:', error);
+      }
+    }
+
+    // Atualiza em tempo real se houver novo cancelamento via socket
+    socket.on('status_atualizado', (p) => {
+      carregarCancelados();
+    });
+
+    socket.on('pedido_disponivel_motoboy', () => {
+      carregarCancelados();
+    });
+
+    carregarCancelados();
+  </script>
+</body>
+</html>
