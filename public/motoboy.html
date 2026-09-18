@@ -110,14 +110,19 @@
       if (entregues.length === 0) {
         containerHistorico.innerHTML = '<p style="color:#aaa;">Nenhuma entrega concluída até o momento.</p>';
       } else {
-        containerHistorico.innerHTML = entregues.reverse().map(p => `
-          <div class="card card-historico">
-            <h3>Pedido #${p.id} - ${p.cliente}</h3>
-            <p><strong>Endereço:</strong> ${p.endereco}</p>
-            <p><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
-            <div class="status-badge" style="background:#28a745; color:white;">Status: Entregue ✅</div>
-          </div>
-        `).join('');
+        containerHistorico.innerHTML = entregues.reverse().map(p => {
+          const formaPag = p.pagamento || p.formaPagamento || 'Não especificado';
+          const infoTroco = p.troco ? ` - Troco: ${p.troco}` : '';
+          return `
+            <div class="card card-historico">
+              <h3>Pedido #${p.id} - ${p.cliente}</h3>
+              <p><strong>Endereço:</strong> ${p.endereco}</p>
+              <p><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
+              <p><strong>Pagamento:</strong> <span style="color: #ff9900; font-weight: bold;">${formaPag}${infoTroco}</span></p>
+              <div class="status-badge" style="background:#28a745; color:white;">Status: Entregue ✅</div>
+            </div>
+          `;
+        }).join('');
       }
     }
 
@@ -126,6 +131,9 @@
         atualizarBotoes(p);
         return;
       }
+
+      const formaPag = p.pagamento || p.formaPagamento || 'Não especificado';
+      const infoTroco = p.troco ? ` - Troco: ${p.troco}` : '';
 
       const div = document.createElement('div');
       div.className = 'card';
@@ -136,6 +144,7 @@
         <p><strong>Cliente:</strong> ${p.cliente}</p>
         <p><strong>Endereço:</strong> ${p.endereco}</p>
         <p><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
+        <p><strong>Pagamento:</strong> <span style="color: #ff9900; font-weight: bold;">${formaPag}${infoTroco}</span></p>
         <div class="status-badge" id="badge-${p.id}">${p.status}</div>
         <div id="acoes-${p.id}"></div>
       `;

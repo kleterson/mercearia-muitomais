@@ -11,6 +11,53 @@
   <title>Mercearia Express</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
+.carrinho-flutuante {
+  position: fixed !important;
+  bottom: 30px !important;
+  right: 30px !important;
+  background-color: #28a745 !important;
+  color: white;
+  padding: 15px 25px;
+  border-radius: 50px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  z-index: 999999 !important;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.modal-carrinho {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000000;
+}
+
+.conteudo-modal {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.input-campo {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
     * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
     body { padding: 20px; background: #f4f6f9; color: #333; }
 
@@ -38,7 +85,6 @@
 
     .box-status { background: #eef9f1; border: 1px solid #28a745; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     .box-carrinho { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
-    .input-campo { width: 100%; padding: 8px; margin: 5px 0 10px 0; border: 1px solid #ccc; border-radius: 4px; }
     
     .btn-remover-item { background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 12px; }
   </style>
@@ -94,31 +140,67 @@
     <p>Status Atual: <span id="status-pedido-texto" style="color: #ff9900; font-weight: bold;">--</span></p>
   </div>
 
-  <!-- Carrinho de Compras -->
-  <div class="box-carrinho">
-    <h2>Seu Carrinho</h2>
-    <div id="itens-carrinho" style="margin: 10px 0;"><p style="color: #777;">Carrinho vazio</p></div>
-    <p style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Total: R$ <span id="total-carrinho">0.00</span></p>
+  <!-- Botão Flutuante do Carrinho -->
+<div class="carrinho-flutuante" id="btn-abrir-carrinho" onclick="toggleCarrinho()">
+  🛒 Ver Carrinho (<span id="contador-carrinho">0</span>) - R$ <span id="total-carrinho">0.00</span>
+</div>
 
+<!-- Caixa / Painel do Carrinho (inicialmente oculto) -->
+<div class="modal-carrinho" id="painel-carrinho" style="display: none;">
+  <div class="conteudo-modal">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <h2>Seu Carrinho</h2>
+      <button onclick="toggleCarrinho()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+    </div>
+    
+    <div id="itens-carrinho" style="margin: 10px 0;">
+      <p style="color: #777;">Carrinho vazio</p>
+    </div>
+    
+    <p style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Total: R$ <span id="total-carrinho-modal">0.00</span></p>
+    
     <label>Seu Nome:</label>
-    <input type="text" id="nome-cliente" class="input-campo" placeholder="Ex: Maria">
-
+    <input type="text" id="nome-cliente" class="input-campo" placeholder="Seu nome">
+    
     <label>Endereço de Entrega:</label>
     <input type="text" id="endereco-cliente" class="input-campo" placeholder="Ex: Rua das Flores, 123">
 
-    <button class="btn-add" style="background: #007bff; font-size: 16px;" onclick="finalizarPedido()">Finalizar Pedido</button>
+    <label>Forma de Pagamento:</label>
+    <select id="forma-pagamento" class="input-campo" onchange="verificarTroco()">
+      <option value="Pix">Pix</option>
+      <option value="Cartao Debito/Credito">Cartão (Débito / Crédito)</option>
+      <option value="Dinheiro">Dinheiro</option>
+    </select>
+
+    <!-- Campo de Troco Dinâmico -->
+    <div id="bloco-troco" style="display: none;">
+      <label>Troco para quanto? (Deixe em branco se não precisar):</label>
+      <input type="text" id="troco-para" class="input-campo" placeholder="Ex: 50.00">
+    </div>
+    
+    <button class="btn-add" style="background: #007bff; font-size: 16px; margin-top: 15px;" onclick="finalizarPedido()">Finalizar Pedido</button>
   </div>
+</div>
 
   <script>
-    // Função para detectar se é um dispositivo móvel
-function ehDispositivoMovel() {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
+    // Função para abrir e fechar o painel do carrinho
+    function toggleCarrinho() {
+      const painel = document.getElementById('painel-carrinho');
+      if (painel.style.display === 'none' || painel.style.display === '') {
+        painel.style.display = 'flex';
+      } else {
+        painel.style.display = 'none';
+      }
+    }
 
-// Se quiser fazer algo específico quando abrir pelo celular:
-if (ehDispositivoMovel()) {
-  console.log("Rodando como app no celular!");
-}
+    // Função para detectar dispositivo móvel
+    function ehDispositivoMovel() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    if (ehDispositivoMovel()) {
+      console.log("Rodando como app no celular!");
+    }
 
     // Verificação de autenticação: se não houver usuário no localStorage, redireciona para login
     let clienteLogado = localStorage.getItem('usuarioLogado');
@@ -177,7 +259,6 @@ if (ehDispositivoMovel()) {
     }
 
     function filtrar(cat, btnElement) {
-      // Atualiza classe de botão ativo
       if (btnElement) {
         document.querySelectorAll('.btn-filtro').forEach(btn => btn.classList.remove('ativo'));
         btnElement.classList.add('ativo');
@@ -205,9 +286,15 @@ if (ehDispositivoMovel()) {
 
     function atualizarCarrinho() {
       const container = document.getElementById('itens-carrinho');
+      
+      // 1. Atualiza contador e totais na tela (Botão Flutuante e Modal)
+      document.getElementById('contador-carrinho').innerText = carrinho.length;
+      const total = carrinho.reduce((acc, p) => acc + Number(p.preco), 0);
+      document.getElementById('total-carrinho').innerText = total.toFixed(2);
+      document.getElementById('total-carrinho-modal').innerText = total.toFixed(2);
+
       if (carrinho.length === 0) {
         container.innerHTML = '<p style="color: #777;">Carrinho vazio</p>';
-        document.getElementById('total-carrinho').innerText = '0.00';
         return;
       }
 
@@ -220,14 +307,24 @@ if (ehDispositivoMovel()) {
           </div>
         </div>
       `).join('');
+    }
 
-      const total = carrinho.reduce((acc, p) => acc + Number(p.preco), 0);
-      document.getElementById('total-carrinho').innerText = total.toFixed(2);
+    function verificarTroco() {
+      const forma = document.getElementById('forma-pagamento').value;
+      const blocoTroco = document.getElementById('bloco-troco');
+      if (forma === 'Dinheiro') {
+        blocoTroco.style.display = 'block';
+      } else {
+        blocoTroco.style.display = 'none';
+        document.getElementById('troco-para').value = '';
+      }
     }
 
     function finalizarPedido() {
       const cliente = document.getElementById('nome-cliente').value.trim();
       const endereco = document.getElementById('endereco-cliente').value.trim();
+      const formaPagamento = document.getElementById('forma-pagamento').value;
+      const trocoPara = document.getElementById('troco-para').value.trim();
 
       if (!cliente || !endereco || carrinho.length === 0) {
         alert('Preencha seu nome, endereço e adicione itens ao carrinho!');
@@ -244,7 +341,9 @@ if (ehDispositivoMovel()) {
         usuario: clienteLogado,
         endereco: endereco,
         itens: carrinho,
-        total: total
+        total: total,
+        pagamento: formaPagamento,
+        troco: trocoPara ? `Para R$ ${trocoPara}` : 'Não precisa de troco'
       };
 
       if (socket) {
@@ -256,6 +355,7 @@ if (ehDispositivoMovel()) {
       alert('Pedido enviado com sucesso!');
       carrinho = [];
       atualizarCarrinho();
+      toggleCarrinho();
     }
 
     function alternarDashCliente() {

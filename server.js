@@ -129,9 +129,12 @@ app.get('/api/avaliacoes', async (req, res) => {
 io.on('connection', (socket) => {
   socket.on('novo_pedido', async (dados) => {
     try {
+      const formaPagamento = dados.pagamento || dados.formaPagamento || 'Não especificado';
+      const valorTroco = dados.troco || null;
+
       const [pedido] = await sql`
-        INSERT INTO pedidos (cliente, usuario, endereco, itens, total, status, data) 
-        VALUES (${dados.cliente}, ${dados.usuario || dados.cliente}, ${dados.endereco}, ${sql.json(dados.itens)}, ${dados.total}, 'Aguardando Aprovação', ${new Date().toLocaleDateString('pt-BR')}) 
+        INSERT INTO pedidos (cliente, usuario, endereco, itens, total, pagamento, troco, status, data) 
+        VALUES (${dados.cliente}, ${dados.usuario || dados.cliente}, ${dados.endereco}, ${sql.json(dados.itens)}, ${dados.total}, ${formaPagamento}, ${valorTroco}, 'Aguardando Aprovação', ${new Date().toLocaleDateString('pt-BR')}) 
         RETURNING *
       `;
       io.emit('pedido_recebido_comercio', pedido);

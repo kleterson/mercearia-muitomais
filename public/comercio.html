@@ -94,6 +94,10 @@
       const podeLancar = p.status === 'Em Preparo / Aceito';
       const foiEntregue = p.status === 'Entregue';
 
+      // Tratamento para exibir pagamento e troco
+      const formaPag = p.pagamento || p.formaPagamento || 'Não especificado';
+      const infoTroco = p.troco ? ` - Troco para: ${p.troco}` : '';
+
       // Cria o elemento se ele não existir, ou reutiliza o existente
       let div = document.getElementById(`pedido-${p.id}`);
       if (!div) {
@@ -107,6 +111,7 @@
         <h3>Pedido #${p.id} - ${p.cliente}</h3>
         <p><strong>Endereço:</strong> ${p.endereco}</p>
         <p><strong>Total:</strong> R$ ${Number(p.total).toFixed(2)}</p>
+        <p><strong>Pagamento:</strong> <span style="color: #ff9900; font-weight: bold;">${formaPag}${infoTroco}</span></p>
         <p><strong>Status:</strong> <span style="font-weight: bold; color: ${foiEntregue ? '#28a745' : '#ff9900'};">${p.status}</span></p>
 
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
