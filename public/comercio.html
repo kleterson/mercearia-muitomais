@@ -10,15 +10,159 @@
     <title>Painel do Comércio - Gestão e Pedidos</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-      body { font-family: sans-serif; padding: 20px; background: #eef2f5; }
-      .container { display: flex; gap: 20px; }
-      .box { background: white; padding: 20px; border-radius: 8px; flex: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-      input, select, button { width: 100%; padding: 8px; margin-top: 8px; }
-      button { background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-      .pedido-card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: white; }
-      .produto-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 8px 0; }
-      .produto-acoes { display: flex; gap: 5px; width: auto; }
-      .produto-acoes button { padding: 4px 8px; margin-top: 0; width: auto; font-size: 12px; }
+      :root {
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --bg-main: #f8fafc;
+        --bg-card: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --success: #16a34a;
+        --danger: #dc2626;
+        --warning: #d97706;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+        padding: 24px; 
+        background: var(--bg-main); 
+        color: var(--text-main);
+        margin: 0;
+      }
+
+      h2 {
+        font-size: 1.25rem;
+        margin-top: 0;
+        margin-bottom: 16px;
+        color: var(--text-main);
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 8px;
+      }
+
+      h3 {
+        font-size: 1rem;
+        color: var(--text-main);
+        margin: 12px 0 8px 0;
+      }
+
+      .container { 
+        display: flex; 
+        gap: 24px; 
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      @media (max-width: 900px) {
+        .container {
+          flex-direction: column;
+        }
+      }
+
+      .box { 
+        background: var(--bg-card); 
+        padding: 24px; 
+        border-radius: 12px; 
+        flex: 1; 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--border-color);
+      }
+
+      input, select { 
+        width: 100%; 
+        padding: 10px 12px; 
+        margin-top: 6px; 
+        margin-bottom: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        background: #fff;
+        color: var(--text-main);
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+
+      input:focus, select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      button { 
+        width: 100%; 
+        padding: 11px 16px; 
+        margin-top: 8px; 
+        background: var(--primary); 
+        color: white; 
+        border: none; 
+        border-radius: 8px; 
+        cursor: pointer; 
+        font-weight: 600; 
+        font-size: 0.95rem;
+        transition: background 0.2s, transform 0.1s;
+      }
+
+      button:hover:not(:disabled) { 
+        background: var(--primary-hover); 
+      }
+
+      button:active:not(:disabled) {
+        transform: scale(0.99);
+      }
+
+      .pedido-card { 
+        border: 1px solid var(--border-color); 
+        padding: 16px; 
+        border-radius: 10px; 
+        margin-bottom: 16px; 
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      }
+
+      .pedido-card p {
+        margin: 6px 0;
+        font-size: 0.95rem;
+        color: var(--text-muted);
+      }
+
+      .pedido-card strong {
+        color: var(--text-main);
+      }
+
+      .produto-item { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        border-bottom: 1px solid var(--border-color); 
+        padding: 10px 0; 
+      }
+
+      .produto-item span {
+        font-size: 0.95rem;
+      }
+
+      .produto-acoes { 
+        display: flex; 
+        gap: 6px; 
+        width: auto; 
+      }
+
+      .produto-acoes button { 
+        padding: 6px 12px; 
+        margin-top: 0; 
+        width: auto; 
+        font-size: 0.85rem; 
+        border-radius: 6px;
+      }
+
+      label {
+        font-size: 0.9rem;
+        color: var(--text-main);
+        cursor: pointer;
+      }
     </style>
 </head>
 <body>
@@ -38,16 +182,16 @@
         <input type="number" step="0.01" id="preco" placeholder="Preço (R$)" required>
         <input type="url" id="foto" placeholder="URL da Imagem (Google Images)" required>
         <input type="text" id="obs" placeholder="Observação do produto">
-        <label style="display: block; margin-top: 10px;">
-          <input type="checkbox" id="promocao" style="width: auto;"> Marcar como Promoção?
+        <label style="display: flex; align-items: center; gap: 8px; margin-top: 12px; margin-bottom: 16px;">
+          <input type="checkbox" id="promocao" style="width: auto; margin: 0;"> Marcar como Promoção?
         </label>
         <button type="submit" id="btn-submit">Adicionar Produto</button>
-        <button type="button" id="btn-cancelar" style="background: #6c757d; display: none; margin-top: 5px;" onclick="cancelarEdicao()">Cancelar Edição</button>
+        <button type="button" id="btn-cancelar" style="background: #64748b; display: none; margin-top: 8px;" onclick="cancelarEdicao()">Cancelar Edição</button>
       </form>
 
-      <div style="margin-top: 25px;">
+      <div style="margin-top: 30px;">
         <h3>Produtos Cadastrados</h3>
-        <div id="lista-produtos" style="max-height: 300px; overflow-y: auto;"></div>
+        <div id="lista-produtos" style="max-height: 320px; overflow-y: auto; padding-right: 4px;"></div>
       </div>
     </div>
 
@@ -80,8 +224,8 @@
           div.innerHTML = `
             <span><strong>${p.nome}</strong> - R$ ${Number(p.preco).toFixed(2)}</span>
             <div class="produto-acoes">
-              <button type="button" style="background: #ffc107; color: black;" onclick='prepararEdicao(${JSON.stringify(p)})'>Editar</button>
-              <button type="button" style="background: #dc3545;" onclick="excluirProduto('${p.id || p._id}')">Excluir</button>
+              <button type="button" style="background: #eab308; color: #000;" onclick='prepararEdicao(${JSON.stringify(p)})'>Editar</button>
+              <button type="button" style="background: var(--danger);" onclick="excluirProduto('${p.id || p._id}')">Excluir</button>
             </div>
           `;
           container.appendChild(div);
@@ -171,23 +315,23 @@
       }
 
       // Cor do status: vermelho se cancelado, verde se entregue, laranja se pendente/andamento
-      let corStatus = '#ff9900';
-      if (cancelado) corStatus = '#dc3545';
-      else if (foiEntregue) corStatus = '#28a745';
+      let corStatus = '#d97706';
+      if (cancelado) corStatus = 'var(--danger)';
+      else if (foiEntregue) corStatus = 'var(--success)';
 
       div.innerHTML = `
-        <h3>Pedido #${p.id} - ${p.cliente}</h3>
+        <h3 style="margin-top: 0; font-size: 1.05rem;">Pedido #${p.id} - ${p.cliente}</h3>
         <p><strong>Endereço:</strong> ${p.endereco}</p>
         <p><strong>Total:</strong> R$ ${Number(p.total).toFixed(2)}</p>
-        <p><strong>Pagamento:</strong> <span style="color: #ff9900; font-weight: bold;">${formaPag}${infoTroco}</span></p>
-        <p><strong>Status:</strong> <span style="font-weight: bold; color: ${corStatus};">${p.status}</span></p>
+        <p><strong>Pagamento:</strong> <span style="color: #d97706; font-weight: 600;">${formaPag}${infoTroco}</span></p>
+        <p><strong>Status:</strong> <span style="font-weight: 600; color: ${corStatus};">${p.status}</span></p>
 
-        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
           <!-- Botão Aceitar -->
           <button 
             onclick="aceitar(${p.id})" 
             ${!podeAceitar ? 'disabled' : ''} 
-            style="background: ${cancelado ? '#dc3545' : (podeAceitar ? '#28a745' : '#6c757d')}; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: ${podeAceitar ? 'pointer' : 'not-allowed'}; opacity: ${podeAceitar ? '1' : '0.6'};">
+            style="background: ${cancelado ? 'var(--danger)' : (podeAceitar ? 'var(--success)' : '#94a3b8')}; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; cursor: ${podeAceitar ? 'pointer' : 'not-allowed'}; opacity: ${podeAceitar ? '1' : '0.6'};">
             ${cancelado ? 'Cancelado pelo Cliente ❌' : (podeAceitar ? 'Aceitar / Confirmar Pedido ✅' : 'Pedido Já Aceito ✅')}
           </button>
 
@@ -195,7 +339,7 @@
           <button 
             onclick="despachar(${p.id})" 
             ${!podeLancar ? 'disabled' : ''} 
-            style="background: ${cancelado ? '#6c757d' : (podeLancar ? '#007bff' : '#6c757d')}; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: ${podeLancar ? 'pointer' : 'not-allowed'}; opacity: ${podeLancar ? '1' : '0.6'};">
+            style="background: ${cancelado ? '#94a3b8' : (podeLancar ? 'var(--primary)' : '#94a3b8')}; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; cursor: ${podeLancar ? 'pointer' : 'not-allowed'}; opacity: ${podeLancar ? '1' : '0.6'};">
             ${cancelado ? 'Indisponível (Cancelado)' : (foiEntregue ? 'Finalizado (Entregue) 🏁' : (podeLancar ? 'Lançar para o Motoboy 🛵' : 'Já Lançado ao Motoboy 🛵'))}
           </button>
         </div>

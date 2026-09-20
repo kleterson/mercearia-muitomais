@@ -3,96 +3,159 @@
 <head>
     <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<!-- Informa ao celular que o site deve se comportar como aplicativo -->
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta charset="UTF-8">
-  <title>Mercearia Express</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-.carrinho-flutuante {
-  position: fixed !important;
-  bottom: 30px !important;
-  right: 30px !important;
-  background-color: #28a745 !important;
-  color: white;
-  padding: 15px 25px;
-  border-radius: 50px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  z-index: 999999 !important;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 16px;
-}
+    <!-- Informa ao celular que o site deve se comportar como aplicativo -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta charset="UTF-8">
+    <title>Mercearia Express</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --primary: #10b981;
+        --primary-dark: #059669;
+        --accent: #f59e0b;
+        --bg-color: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --radius: 12px;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      }
 
-.modal-carrinho {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000000;
-}
+      * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+      body { padding: 20px; background: var(--bg-color); color: var(--text-main); max-width: 1200px; margin: 0 auto; }
 
-.conteudo-modal {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 400px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
+      .header-bar { 
+        background: linear-gradient(135deg, #0f172a, #1e293b); 
+        color: white; 
+        padding: 20px 24px; 
+        border-radius: var(--radius); 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 24px; 
+        box-shadow: var(--shadow);
+      }
+      .header-bar h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+      .header-actions { display: flex; gap: 10px; align-items: center; }
+      
+      .btn-dash { background: #3b82f6; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+      .btn-dash:hover { background: #2563eb; }
+      .btn-sair { background: #ef4444; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+      .btn-sair:hover { background: #dc2626; }
 
-.input-campo {
-  width: 100%;
-  padding: 8px;
-  margin-top: 5px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-    * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
-    body { padding: 20px; background: #f4f6f9; color: #333; }
+      /* Modal Dashboard Cliente */
+      #dash-cliente { display: none; background: var(--card-bg); border: 1px solid var(--border-color); padding: 24px; border-radius: var(--radius); margin-bottom: 24px; box-shadow: var(--shadow-lg); }
+      .dash-metrics { display: flex; gap: 16px; margin: 16px 0; }
+      .metric-card { flex: 1; background: #f1f5f9; padding: 16px; border-radius: 10px; text-align: center; border: 1px solid var(--border-color); }
+      .metric-card small { color: var(--text-muted); font-weight: 500; font-size: 13px; }
+      .metric-card h3 { font-size: 20px; margin-top: 4px; color: var(--text-main); }
 
-    .header-bar { background: #1a1a2e; color: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .header-actions { display: flex; gap: 10px; align-items: center; }
-    
-    .btn-dash { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .btn-sair { background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+      .filtros { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+      .btn-filtro { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-muted); padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; box-shadow: var(--shadow); }
+      .btn-filtro:hover { border-color: var(--text-muted); color: var(--text-main); }
+      .btn-filtro.ativo { background: var(--primary); color: white; border-color: var(--primary); }
 
-    /* Modal Dashboard Cliente */
-    #dash-cliente { display: none; background: #ffffff; border: 2px solid #007bff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    .dash-metrics { display: flex; gap: 15px; margin: 15px 0; }
-    .metric-card { flex: 1; background: #e9ecef; padding: 12px; border-radius: 6px; text-align: center; }
+      .grid-produtos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+      .card-produto { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 14px; text-align: center; box-shadow: var(--shadow); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; justify-content: space-between; }
+      .card-produto:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+      .card-produto img { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; background: #e2e8f0; }
+      .badge-promo { background: var(--accent); color: white; font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 700; display: inline-block; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-    .filtros { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    .btn-filtro { background: #e0e0e0; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    .btn-filtro.ativo { background: #ff9900; color: white; }
+      .btn-add { background: var(--primary); color: white; border: none; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 12px; transition: background 0.2s; }
+      .btn-add:hover { background: var(--primary-dark); }
 
-    .grid-produtos { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .card-produto { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; text-align: center; }
-    .card-produto img { width: 100%; height: 120px; object-fit: cover; border-radius: 6px; }
-    .badge-promo { background: #ff9900; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold; display: inline-block; margin-top: 4px; }
+      .box-status { background: #ecfdf5; border: 1px solid #a7f3d0; padding: 20px; border-radius: var(--radius); margin-bottom: 24px; box-shadow: var(--shadow); }
+      .box-status h3 { color: #065f46; font-size: 18px; margin-bottom: 8px; }
+      
+      .box-carrinho { background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); }
+      
+      .btn-remover-item { background: #fee2e2; color: #ef4444; border: none; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: background 0.2s; }
+      .btn-remover-item:hover { background: #fecaca; }
 
-    .btn-add { background: #28a745; color: white; border: none; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 8px; }
+      /* Estilização dos Modais e Carrinho Flutuante */
+      .carrinho-flutuante {
+        position: fixed !important;
+        bottom: 24px !important;
+        right: 24px !important;
+        background-color: var(--primary) !important;
+        color: white;
+        padding: 16px 28px;
+        border-radius: 50px;
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        z-index: 999999 !important;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 16px;
+        transition: transform 0.2s, background-color 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .carrinho-flutuante:hover { transform: scale(1.05); background-color: var(--primary-dark) !important; }
 
-    .box-status { background: #eef9f1; border: 1px solid #28a745; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    .box-carrinho { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
-    
-    .btn-remover-item { background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-  </style>
+      .modal-carrinho {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000000;
+        padding: 16px;
+      }
+
+      .conteudo-modal {
+        background: var(--card-bg);
+        padding: 24px;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 440px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        animation: modalAppear 0.25s ease-out;
+      }
+
+      @keyframes modalAppear {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .input-campo {
+        width: 100%;
+        padding: 12px;
+        margin-top: 6px;
+        margin-bottom: 14px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 14px;
+        background: #f8fafc;
+        color: var(--text-main);
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      .input-campo:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        background: #ffffff;
+      }
+
+      label { font-size: 13px; font-weight: 600; color: var(--text-muted); display: block; margin-top: 4px; }
+    </style>
 </head>
 <body>
 
   <div class="header-bar">
-    <h1>Mercearia Express</h1>
+    <h1>🛒 Mercado </h1>
     <div class="header-actions">
       <button class="btn-dash" onclick="window.location.href='historico.html'">📊 Minhas Compras</button>
       <button class="btn-sair" onclick="fazerLogout()">🚪 Sair</button>
@@ -101,9 +164,9 @@
 
   <!-- Dashboard Modal / Gaveta do Cliente -->
   <div id="dash-cliente">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <h2>📊 Seu Histórico de Compras</h2>
-      <button onclick="alternarDashCliente()" style="background: transparent; border: none; font-size: 20px; cursor: pointer;">✖</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h2 style="font-size: 18px;">📊 Seu Histórico de Compras</h2>
+      <button onclick="alternarDashCliente()" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">✖</button>
     </div>
 
     <div class="dash-metrics">
@@ -113,30 +176,30 @@
       </div>
       <div class="metric-card">
         <small>Total Gasto</small>
-        <h3 style="color: #28a745;">R$ <span id="cli-total-gasto">0.00</span></h3>
+        <h3 style="color: var(--primary);">R$ <span id="cli-total-gasto">0.00</span></h3>
       </div>
     </div>
 
-    <h4 style="margin-bottom: 10px;">Suas Compras Anteriores:</h4>
-    <div id="cli-lista-historico">Nenhuma compra realizada ainda.</div>
+    <h4 style="margin-bottom: 10px; font-size: 14px; color: var(--text-muted);">Suas Compras Anteriores:</h4>
+    <div id="cli-lista-historico" style="font-size: 14px;">Nenhuma compra realizada ainda.</div>
   </div>
 
   <!-- Status do Pedido Atual (Sempre no topo quando ativo) -->
   <div class="box-status" id="box-status" style="display: none;">
     <h3>🛵 Status do Seu Pedido</h3>
-    <p><strong id="status-pedido-id">Pedido #--</strong></p>
-    <p>Status Atual: <span id="status-pedido-texto" style="color: #ff9900; font-weight: bold;">--</span></p>
-    <button id="btn-cancelar-pedido" onclick="tentarCancelarPedido()" style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%;">Cancelar Pedido ❌</button>
+    <p style="margin-top: 4px;"><strong id="status-pedido-id">Pedido #--</strong></p>
+    <p style="margin-top: 2px;">Status Atual: <span id="status-pedido-texto" style="color: var(--accent); font-weight: bold;">--</span></p>
+    <button id="btn-cancelar-pedido" onclick="tentarCancelarPedido()" style="background: #ef4444; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 12px; width: 100%; transition: background 0.2s;">Cancelar Pedido ❌</button>
   </div>
 
   <!-- Modal do Bot de Cancelamento -->
   <div class="modal-carrinho" id="modal-bot-cancelar" style="display: none;">
     <div class="conteudo-modal">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h2>Assistente Virtual 🤖</h2>
-        <button onclick="fecharBotCancelar()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 18px;">Assistente Virtual 🤖</h2>
+        <button onclick="fecharBotCancelar()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">✕</button>
       </div>
-      <div id="conteudo-bot-chat" style="font-size: 14px; line-height: 1.5; color: #333;">
+      <div id="conteudo-bot-chat" style="font-size: 14px; line-height: 1.5; color: var(--text-main);">
         <!-- Mensagens injetadas dinamicamente -->
       </div>
     </div>
@@ -155,46 +218,51 @@
   <div class="grid-produtos" id="grade-produtos"></div>
 
   <!-- Botão Flutuante do Carrinho -->
-<div class="carrinho-flutuante" id="btn-abrir-carrinho" onclick="toggleCarrinho()">
-  🛒 Ver Carrinho (<span id="contador-carrinho">0</span>) - R$ <span id="total-carrinho">0.00</span>
-</div>
-
-<!-- Caixa / Painel do Carrinho (inicialmente oculto) -->
-<div class="modal-carrinho" id="painel-carrinho" style="display: none;">
-  <div class="conteudo-modal">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-      <h2>Seu Carrinho</h2>
-      <button onclick="toggleCarrinho()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
-    </div>
-    
-    <div id="itens-carrinho" style="margin: 10px 0;">
-      <p style="color: #777;">Carrinho vazio</p>
-    </div>
-    
-    <p style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Total: R$ <span id="total-carrinho-modal">0.00</span></p>
-    
-    <label>Seu Nome:</label>
-    <input type="text" id="nome-cliente" class="input-campo" placeholder="Seu nome">
-    
-    <label>Endereço de Entrega:</label>
-    <input type="text" id="endereco-cliente" class="input-campo" placeholder="Ex: Rua das Flores, 123">
-
-    <label>Forma de Pagamento:</label>
-    <select id="forma-pagamento" class="input-campo" onchange="verificarTroco()">
-      <option value="Pix">Pix</option>
-      <option value="Cartao Debito/Credito">Cartão (Débito / Crédito)</option>
-      <option value="Dinheiro">Dinheiro</option>
-    </select>
-
-    <!-- Campo de Troco Dinâmico -->
-    <div id="bloco-troco" style="display: none;">
-      <label>Troco para quanto? (Deixe em branco se não precisar):</label>
-      <input type="text" id="troco-para" class="input-campo" placeholder="Ex: 50.00">
-    </div>
-    
-    <button class="btn-add" style="background: #007bff; font-size: 16px; margin-top: 15px;" onclick="finalizarPedido()">Finalizar Pedido</button>
+  <div class="carrinho-flutuante" id="btn-abrir-carrinho" onclick="toggleCarrinho()">
+    🛒 Ver Carrinho (<span id="contador-carrinho">0</span>) - R$ <span id="total-carrinho">0.00</span>
   </div>
-</div>
+
+  <!-- Caixa / Painel do Carrinho (inicialmente oculto) -->
+  <div class="modal-carrinho" id="painel-carrinho" style="display: none;">
+    <div class="conteudo-modal">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 18px;">Seu Carrinho</h2>
+        <button onclick="toggleCarrinho()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">✕</button>
+      </div>
+      
+      <div id="itens-carrinho" style="margin: 10px 0; max-height: 180px; overflow-y: auto;">
+        <p style="color: var(--text-muted); font-size: 14px;">Carrinho vazio</p>
+      </div>
+      
+      <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 16px; font-weight: 600; color: var(--text-muted);">Total:</span>
+        <span style="font-size: 20px; font-weight: 700; color: var(--primary);">R$ <span id="total-carrinho-modal">0.00</span></span>
+      </div>
+      
+      <div style="margin-top: 14px;">
+        <label>Seu Nome:</label>
+        <input type="text" id="nome-cliente" class="input-campo" placeholder="Seu nome">
+        
+        <label>Endereço de Entrega:</label>
+        <input type="text" id="endereco-cliente" class="input-campo" placeholder="Ex: Rua das Flores, 123">
+
+        <label>Forma de Pagamento:</label>
+        <select id="forma-pagamento" class="input-campo" onchange="verificarTroco()">
+          <option value="Pix">Pix</option>
+          <option value="Cartao Debito/Credito">Cartão (Débito / Crédito)</option>
+          <option value="Dinheiro">Dinheiro</option>
+        </select>
+
+        <!-- Campo de Troco Dinâmico -->
+        <div id="bloco-troco" style="display: none;">
+          <label>Troco para quanto? (Deixe em branco se não precisar):</label>
+          <input type="text" id="troco-para" class="input-campo" placeholder="Ex: 50.00">
+        </div>
+      </div>
+      
+      <button class="btn-add" style="background: var(--primary); font-size: 16px; margin-top: 8px; padding: 12px;" onclick="finalizarPedido()">Finalizar Pedido</button>
+    </div>
+  </div>
 
   <script>
     // Variável para guardar o status atual do pedido ativo do cliente
@@ -266,21 +334,21 @@
       // Se o comércio já aceitou (diferente de 'Aguardando Aprovação')
       if (statusPedidoAtual && statusPedidoAtual !== 'Aguardando Aprovação') {
         chatBox.innerHTML = `
-          <p style="background: #f1f1f1; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+          <p style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color);">
             Olá sou assistente virtual 🤖, infelizmente não dá para cancelar, o restaurante já aceitou seu pedido.
           </p>
-          <button onclick="fecharBotCancelar()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; width: 100%; cursor: pointer; font-weight: bold;">Entendido</button>
+          <button onclick="fecharBotCancelar()" style="background: #3b82f6; color: white; border: none; padding: 10px 12px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 600;">Entendido</button>
         `;
       } else {
         // Se ainda estiver aguardando aprovação
         chatBox.innerHTML = `
-          <p style="background: #f1f1f1; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+          <p style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color);">
             Olá sou assistente virtual 🤖, qual motivo do cancelamento, escolha a opção abaixo:
           </p>
-          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
-            <button onclick="escolherMotivoCancelamento(1)" style="background: #e9ecef; border: 1px solid #ccc; padding: 8px; border-radius: 5px; text-align: left; cursor: pointer;">1 - Comprei sem querer</button>
-            <button onclick="escolherMotivoCancelamento(2)" style="background: #e9ecef; border: 1px solid #ccc; padding: 8px; border-radius: 5px; text-align: left; cursor: pointer;">2 - Não reconheço essa compra</button>
-            <button onclick="escolherMotivoCancelamento(3)" style="background: #e9ecef; border: 1px solid #ccc; padding: 8px; border-radius: 5px; text-align: left; cursor: pointer;">3 - Prefiro ir até o local</button>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+            <button onclick="escolherMotivoCancelamento(1)" style="background: #ffffff; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; text-align: left; cursor: pointer; font-weight: 500;">1 - Comprei sem querer</button>
+            <button onclick="escolherMotivoCancelamento(2)" style="background: #ffffff; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; text-align: left; cursor: pointer; font-weight: 500;">2 - Não reconheço essa compra</button>
+            <button onclick="escolherMotivoCancelamento(3)" style="background: #ffffff; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; text-align: left; cursor: pointer; font-weight: 500;">3 - Prefiro ir até o local</button>
           </div>
         `;
       }
@@ -301,19 +369,19 @@
 
       const chatBox = document.getElementById('conteudo-bot-chat');
       chatBox.innerHTML = `
-        <p style="background: #f1f1f1; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+        <p style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border-color);">
           Sua compra foi cancelada com sucesso ✅
         </p>
-        <p style="background: #f1f1f1; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+        <p style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border-color);">
           Por favor, avalie o atendimento com estrelinha de 0 a 5 ⭐:
         </p>
-        <div style="display: flex; justify-content: center; gap: 5px; margin-bottom: 15px;">
-          <button onclick="avaliarAtendimento(0)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">0</button>
-          <button onclick="avaliarAtendimento(1)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">1</button>
-          <button onclick="avaliarAtendimento(2)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">2</button>
-          <button onclick="avaliarAtendimento(3)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">3</button>
-          <button onclick="avaliarAtendimento(4)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">4</button>
-          <button onclick="avaliarAtendimento(5)" style="background: #ffc107; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">5</button>
+        <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
+          <button onclick="avaliarAtendimento(0)" style="background: #f59e0b; color:white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">0</button>
+          <button onclick="avaliarAtendimento(1)" style="background: #f59e0b; color:white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">1</button>
+          <button onclick="avaliarAtendimento(2)" style="background: #f59e0b; color:white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">2</button>
+          <button onclick="avaliarAtendimento(3)" style="background: #f59e0b; color:white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">3</button>
+          <button onclick="avaliarAtendimento(4)" style="background: #f59e0b; color:white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">4</button>
+          <button onclick="avaliarAtendimento(5)" style="background: #f59e0b; color:white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">5</button>
         </div>
       `;
       // Esconde o painel de status pois foi cancelado permanentemente
@@ -325,25 +393,25 @@
       const chatBox = document.getElementById('conteudo-bot-chat');
       if (nota === 5) {
         chatBox.innerHTML = `
-          <p style="background: #eef9f1; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; color: #28a745;">
+          <p style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: 600; color: #065f46;">
             Obrigado pelo feedback volte sempre 😊
           </p>
-          <button onclick="fecharBotCancelar()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; width: 100%; cursor: pointer; font-weight: bold;">Fechar</button>
+          <button onclick="fecharBotCancelar()" style="background: #3b82f6; color: white; border: none; padding: 10px 12px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 600;">Fechar</button>
         `;
       } else if (nota >= 0 && nota <= 2) {
         chatBox.innerHTML = `
-          <p style="background: #fdf2f2; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; color: #dc3545;">
+          <p style="background: #fee2e2; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: 600; color: #991b1b;">
             Obrigado pelo atendimento, desculpa o transtorno 😢 e volte sempre.
           </p>
-          <button onclick="fecharBotCancelar()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; width: 100%; cursor: pointer; font-weight: bold;">Fechar</button>
+          <button onclick="fecharBotCancelar()" style="background: #3b82f6; color: white; border: none; padding: 10px 12px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 600;">Fechar</button>
         `;
       } else {
         // Notas 3 e 4 por segurança seguem uma mensagem padrão amigável
         chatBox.innerHTML = `
-          <p style="background: #f1f1f1; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold;">
+          <p style="background: #f1f5f9; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: 600;">
             Obrigado pela avaliação! Volte sempre 🙂
           </p>
-          <button onclick="fecharBotCancelar()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; width: 100%; cursor: pointer; font-weight: bold;">Fechar</button>
+          <button onclick="fecharBotCancelar()" style="background: #3b82f6; color: white; border: none; padding: 10px 12px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 600;">Fechar</button>
         `;
       }
     }
@@ -380,18 +448,22 @@
     function renderizarProdutos(lista) {
       const container = document.getElementById('grade-produtos');
       if (!lista || lista.length === 0) {
-        container.innerHTML = '<p style="grid-column: 1/-1;">Nenhum produto encontrado nesta categoria.</p>';
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 30px;">Nenhum produto encontrado nesta categoria.</p>';
         return;
       }
 
       container.innerHTML = lista.map(p => `
         <div class="card-produto">
-          <img src="${p.foto || 'https://via.placeholder.com/150'}" alt="${p.nome}">
-          <h3 style="font-size: 16px; margin-top: 6px;">${p.nome}</h3>
-          <p style="font-size: 12px; color: #666;">${p.obs || ''}</p>
-          <p style="font-size: 16px; font-weight: bold; margin: 5px 0;">R$ ${Number(p.preco).toFixed(2)}</p>
-          ${p.promocao ? '<span class="badge-promo">PROMOÇÃO</span>' : ''}
-          <button class="btn-add" onclick="adicionarCarrino(${p.id})">Adicionar</button>
+          <div>
+            <img src="${p.foto || 'https://via.placeholder.com/150'}" alt="${p.nome}">
+            <h3 style="font-size: 15px; font-weight: 600; margin-top: 6px; color: var(--text-main);">${p.nome}</h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${p.obs || ''}</p>
+          </div>
+          <div>
+            <p style="font-size: 16px; font-weight: 700; margin: 8px 0; color: var(--primary);">R$ ${Number(p.preco).toFixed(2)}</p>
+            ${p.promocao ? '<div><span class="badge-promo">PROMOÇÃO</span></div>' : ''}
+            <button class="btn-add" onclick="adicionarCarrino(${p.id})">Adicionar</button>
+          </div>
         </div>
       `).join('');
     }
@@ -431,15 +503,15 @@
       document.getElementById('total-carrinho-modal').innerText = total.toFixed(2);
 
       if (carrinho.length === 0) {
-        container.innerHTML = '<p style="color: #777;">Carrinho vazio</p>';
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 14px; text-align: center; padding: 10px;">Carrinho vazio</p>';
         return;
       }
 
       container.innerHTML = carrinho.map((p, index) => `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border-bottom: 1px #eee solid; padding-bottom: 4px;">
-          <span>${p.nome}</span>
-          <div>
-            <span style="font-weight: bold; margin-right: 8px;">R$ ${Number(p.preco).toFixed(2)}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+          <span style="font-size: 14px; font-weight: 500;">${p.nome}</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 14px; font-weight: 600; color: var(--primary);">R$ ${Number(p.preco).toFixed(2)}</span>
             <button class="btn-remover-item" onclick="removerDoCarrinho(${index})">✕</button>
           </div>
         </div>
@@ -526,14 +598,17 @@
 
       const container = document.getElementById('cli-lista-historico');
       if (meusPedidos.length === 0) {
-        container.innerHTML = '<p style="color: #777;">Você ainda não possui histórico de compras.</p>';
+        container.innerHTML = '<p style="color: var(--text-muted);">Você ainda não possui histórico de compras.</p>';
         return;
       }
 
       container.innerHTML = meusPedidos.slice().reverse().map(p => `
-        <div style="border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 10px; background: #f9f9f9;">
-          <strong>Pedido #${p.id}</strong> - <span style="color: #007bff; font-weight: bold;">${p.status || 'Pendente'}</span>
-          <p style="font-size: 13px; color: #555; margin: 4px 0;">Data: ${p.data || 'Hoje'}</p>
+        <div style="border: 1px solid var(--border-color); padding: 14px; border-radius: 8px; margin-bottom: 10px; background: #ffffff; box-shadow: var(--shadow);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong>Pedido #${p.id}</strong>
+            <span style="color: var(--primary); font-weight: 600; font-size: 13px; background: #ecfdf5; padding: 2px 8px; border-radius: 4px;">${p.status || 'Pendente'}</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); margin: 6px 0;">Data: ${p.data || 'Hoje'}</p>
           <p style="font-size: 14px;"><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
         </div>
       `).join('');

@@ -3,59 +3,221 @@
 <head>
     <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<!-- Informa ao celular que o site deve se comportar como aplicativo -->
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta charset="UTF-8">
-  <title>Painel de Entregas (Motoboy)</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
-    body { padding: 20px; background: #1a1a2e; color: white; }
-    
-    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .header-actions { display: flex; gap: 10px; align-items: center; }
-    
-    /* Botões do Topo */
-    .btn-dash { background: #e94560; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-    .btn-cancelados-topo { background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; text-decoration: none; }
-    
-    /* Painel Expansível (Dashboard Modal/Gaveta) */
-    #painel-historico { display: none; background: #16213e; border: 2px solid #e94560; border-radius: 10px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-    
-    /* Cards de Resumo */
-    .dash-metrics { display: flex; justify-content: center; margin: 15px 0; }
-    .metric-card { width: 100%; max-width: 400px; background: #0f3460; padding: 15px; border-radius: 8px; text-align: center; }
-    .metric-card h3 { font-size: 14px; color: #aaa; margin-bottom: 5px; }
-    .metric-card p { font-size: 22px; font-weight: bold; color: #ff9900; }
-    
-    /* Cards de Pedidos */
-    .card { background: #16213e; border-left: 5px solid #e94560; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-    .card-historico { border-left-color: #28a745; background: #0f3460; }
-    
-    .btn { width: 100%; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; font-size: 15px; }
-    .btn-aceitar { background: #ff9900; color: #1a1a2e; }
-    .btn-caminho { background: #007bff; color: white; }
-    .btn-entregue { background: #28a745; color: white; }
-    .status-badge { background: #0f3460; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-top: 5px; font-weight: bold; }
-  </style>
+    <!-- Informa ao celular que o site deve se comportar como aplicativo -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta charset="UTF-8">
+    <title>Painel de Entregas (Motoboy)</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --primary: #f59e0b;
+        --primary-dark: #d97706;
+        --success: #10b981;
+        --success-dark: #059669;
+        --danger: #ef4444;
+        --info: #3b82f6;
+        --bg-color: #0f172a;
+        --card-bg: #1e293b;
+        --card-bg-alt: #334155;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --border-color: #334155;
+        --radius: 14px;
+        --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+      }
+
+      * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+      
+      body { 
+        padding: 16px; 
+        background-color: var(--bg-color); 
+        background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+        color: var(--text-main); 
+        min-height: 100vh;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+      
+      .header-bar { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 20px; 
+        background: var(--card-bg);
+        padding: 14px 18px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
+      }
+
+      .header-bar h1 {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .header-actions { display: flex; gap: 8px; align-items: center; }
+      
+      /* Botões do Topo */
+      .btn-dash { 
+        background: var(--card-bg-alt); 
+        color: var(--text-main); 
+        border: 1px solid var(--border-color); 
+        padding: 8px 12px; 
+        border-radius: 10px; 
+        font-weight: 600; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        gap: 6px; 
+        font-size: 13px;
+        transition: background 0.2s;
+      }
+      .btn-dash:hover { background: #475569; }
+
+      .btn-cancelados-topo { 
+        background: rgba(239, 68, 68, 0.15); 
+        color: #fca5a5; 
+        border: 1px solid rgba(239, 68, 68, 0.3); 
+        padding: 8px 12px; 
+        border-radius: 10px; 
+        font-weight: 600; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        gap: 6px; 
+        text-decoration: none; 
+        font-size: 13px;
+        transition: background 0.2s;
+      }
+      .btn-cancelados-topo:hover { background: rgba(239, 68, 68, 0.25); }
+      
+      /* Painel Expansível (Dashboard Modal/Gaveta) */
+      #painel-historico { 
+        display: none; 
+        background: var(--card-bg); 
+        border: 1px solid var(--border-color); 
+        border-radius: var(--radius); 
+        padding: 20px; 
+        margin-bottom: 25px; 
+        box-shadow: var(--shadow);
+        animation: fadeIn 0.2s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      /* Cards de Resumo */
+      .dash-metrics { display: flex; justify-content: center; margin: 15px 0; }
+      .metric-card { 
+        width: 100%; 
+        max-width: 400px; 
+        background: var(--card-bg-alt); 
+        padding: 16px; 
+        border-radius: 12px; 
+        text-align: center; 
+        border: 1px solid var(--border-color);
+      }
+      .metric-card h3 { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .metric-card p { font-size: 26px; font-weight: 700; color: var(--primary); }
+      
+      /* Títulos das Seções */
+      h2:not(.header-bar h2) {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      /* Cards de Pedidos */
+      .card { 
+        background: var(--card-bg); 
+        border-left: 5px solid var(--primary); 
+        padding: 18px; 
+        border-radius: var(--radius); 
+        margin-bottom: 16px; 
+        box-shadow: var(--shadow);
+        border-top: 1px solid var(--border-color);
+        border-right: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+      }
+      .card h2 {
+        color: var(--text-main);
+        font-size: 18px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 8px;
+        text-transform: none;
+      }
+      .card p {
+        font-size: 14px;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        line-height: 1.4;
+      }
+      .card p strong {
+        color: var(--text-main);
+      }
+
+      .card-historico { border-left-color: var(--success); background: var(--card-bg); }
+      
+      .btn { 
+        width: 100%; 
+        padding: 13px; 
+        border: none; 
+        border-radius: 10px; 
+        cursor: pointer; 
+        font-weight: 600; 
+        margin-top: 14px; 
+        font-size: 15px; 
+        transition: filter 0.2s, transform 0.1s;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+      }
+      .btn:active { transform: scale(0.98); }
+      .btn:hover { filter: brightness(1.1); }
+
+      .btn-aceitar { background: var(--primary); color: #0f172a; }
+      .btn-caminho { background: var(--info); color: white; }
+      .btn-entregue { background: var(--success); color: white; }
+      
+      .status-badge { 
+        background: rgba(59, 130, 246, 0.15); 
+        color: #93c5fd; 
+        padding: 6px 12px; 
+        border-radius: 8px; 
+        display: inline-block; 
+        margin-top: 10px; 
+        font-weight: 600; 
+        font-size: 13px;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+    </style>
 </head>
 <body>
 
   <div class="header-bar">
-    <h1>🛵 Painel de Entregas</h1>
+    <h1>🛵 Painel Motoboy</h1>
     <div class="header-actions">
-      <button class="btn-dash" onclick="alternarHistorico()">📊 Histórico / Dash</button>
+      <button class="btn-dash" onclick="alternarHistorico()">📊 Histórico</button>
       <a href="cancelados.html" class="btn-cancelados-topo">❌ Cancelados</a>
     </div>
   </div>
 
   <!-- Janela Expansível do Histórico -->
   <div id="painel-historico">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h2>📈 Dashboard & Histórico de Entregas</h2>
-      <button onclick="alternarHistorico()" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer;">✖</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+      <h2 style="margin:0; color:var(--text-main); font-size:16px;">📈 Dashboard & Histórico</h2>
+      <button onclick="alternarHistorico()" style="background:transparent; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding: 4px;">✖</button>
     </div>
 
     <div class="dash-metrics">
@@ -65,12 +227,12 @@
       </div>
     </div>
 
-    <h3 style="margin-bottom: 10px; font-size: 16px; color: #ddd;">Lista de Pedidos Entregues:</h3>
-    <div id="lista-historico">Nenhuma entrega realizada ainda.</div>
+    <h3 style="margin-bottom: 10px; font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Lista de Pedidos Entregues:</h3>
+    <div id="lista-historico"><p style="color:var(--text-muted); font-size: 14px;">Nenhuma entrega realizada ainda.</p></div>
   </div>
 
   <h2>Entregas Ativas</h2>
-  <div id="lista-pedidos" style="margin-top: 15px;"></div>
+  <div id="lista-pedidos" style="margin-top: 10px;"></div>
 
   <script>
     const socket = io();
@@ -97,7 +259,7 @@
       );
       
       if (ativos.length === 0) {
-        document.getElementById('lista-pedidos').innerHTML = '<p style="color:#aaa;">Nenhuma corrida pendente no momento.</p>';
+        document.getElementById('lista-pedidos').innerHTML = '<p style="color:var(--text-muted); font-size:14px; background:var(--card-bg); padding:20px; border-radius:var(--radius); text-align:center; border:1px solid var(--border-color);">Nenhuma corrida pendente no momento.</p>';
       } else {
         ativos.reverse().forEach(p => renderizarCardAtivo(p));
       }
@@ -112,18 +274,19 @@
 
       const containerHistorico = document.getElementById('lista-historico');
       if (entregues.length === 0) {
-        containerHistorico.innerHTML = '<p style="color:#aaa;">Nenhuma entrega concluída até o momento.</p>';
+        containerHistorico.innerHTML = '<p style="color:var(--text-muted); font-size: 14px;">Nenhuma entrega concluída até o momento.</p>';
       } else {
         containerHistorico.innerHTML = entregues.reverse().map(p => {
           const formaPag = p.pagamento || p.formaPagamento || 'Não especificado';
           const infoTroco = p.troco ? ` - Troco: ${p.troco}` : '';
           return `
             <div class="card card-historico">
-              <h3>Pedido #${p.id} - ${p.cliente}</h3>
+              <h2>Pedido #${p.id}</h2>
+              <p><strong>Cliente:</strong> ${p.cliente}</p>
               <p><strong>Endereço:</strong> ${p.endereco}</p>
               <p><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
-              <p><strong>Pagamento:</strong> <span style="color: #ff9900; font-weight: bold;">${formaPag}${infoTroco}</span></p>
-              <div class="status-badge" style="background:#28a745; color:white;">Status: Entregue ✅</div>
+              <p><strong>Pagamento:</strong> <span style="color: var(--primary); font-weight: 600;">${formaPag}${infoTroco}</span></p>
+              <div class="status-badge" style="background:rgba(16, 185, 129, 0.15); color:#6ee7b7; border-color:rgba(16, 185, 129, 0.3);">Status: Entregue ✅</div>
             </div>
           `;
         }).join('');
@@ -148,7 +311,7 @@
         <p><strong>Cliente:</strong> ${p.cliente}</p>
         <p><strong>Endereço:</strong> ${p.endereco}</p>
         <p><strong>Valor:</strong> R$ ${Number(p.total).toFixed(2)}</p>
-        <p><strong>Pagamento:</strong> <span style="color: #ff9900; font-weight: bold;">${formaPag}${infoTroco}</span></p>
+        <p><strong>Pagamento:</strong> <span style="color: var(--primary); font-weight: 600;">${formaPag}${infoTroco}</span></p>
         <div class="status-badge" id="badge-${p.id}">${p.status}</div>
         <div id="acoes-${p.id}"></div>
       `;
