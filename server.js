@@ -11,6 +11,21 @@ const io = new Server(server);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/mercado', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('delivery', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'motoboy.html'));
+});
+
+app.get('admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'comercio.html'));
+});
 
 // ⚙️ Conexão com o Supabase (PostgreSQL via Pooler)
 const connectionString = process.env.DATABASE_URL;
