@@ -16,6 +16,9 @@
       input, select, button { width: 100%; padding: 8px; margin-top: 8px; }
       button { background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
       .pedido-card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: white; }
+      .produto-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 8px 0; }
+      .produto-acoes { display: flex; gap: 5px; width: auto; }
+      .produto-acoes button { padding: 4px 8px; margin-top: 0; width: auto; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -24,6 +27,7 @@
     <div class="box">
       <h2>Cadastrar / Gerenciar Produtos</h2>
       <form id="form-produto">
+        <input type="hidden" id="produto-id">
         <input type="text" id="nome" placeholder="Nome do Item" required>
         <select id="categoria">
           <option value="lacticinios">Laticínios</option>
@@ -37,8 +41,14 @@
         <label style="display: block; margin-top: 10px;">
           <input type="checkbox" id="promocao" style="width: auto;"> Marcar como Promoção?
         </label>
-        <button type="submit">Adicionar Produto</button>
+        <button type="submit" id="btn-submit">Adicionar Produto</button>
+        <button type="button" id="btn-cancelar" style="background: #6c757d; display: none; margin-top: 5px;" onclick="cancelarEdicao()">Cancelar Edição</button>
       </form>
+
+      <div style="margin-top: 25px;">
+        <h3>Produtos Cadastrados</h3>
+        <div id="lista-produtos" style="max-height: 300px; overflow-y: auto;"></div>
+      </div>
     </div>
 
     <div class="box">
@@ -57,8 +67,33 @@
       pedidos.reverse().forEach(p => renderizarPedido(p));
     }
 
+    async function carregarProdutos() {
+      try {
+        const res = await fetch('/api/produtos');
+        const produtos = await res.json();
+        const container = document.getElementById('lista-produtos');
+        container.innerHTML = '';
+        
+        produtos.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'produto-item';
+          div.innerHTML = `
+            <span><strong>${p.nome}</strong> - R$ ${Number(p.preco).toFixed(2)}</span>
+            <div class="produto-acoes">
+              <button type="button" style="background: #ffc107; color: black;" onclick='prepararEdicao(${JSON.stringify(p)})'>Editar</button>
+              <button type="button" style="background: #dc3545;" onclick="excluirProduto('${p.id || p._id}')">Excluir</button>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      } catch (e) {
+        console.error("Erro ao carregar produtos:", e);
+      }
+    }
+
     document.getElementById('form-produto').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const id = document.getElementById('produto-id').value;
       const dados = {
         nome: document.getElementById('nome').value,
         categoria: document.getElementById('categoria').value,
@@ -68,15 +103,46 @@
         promocao: document.getElementById('promocao').checked
       };
 
-      await fetch('/api/produtos', {
-        method: 'POST',
+      const url = id ? `/api/produtos/${id}` : '/api/produtos';
+      const method = id ? 'PUT' : 'POST';
+
+      await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dados)
       });
 
-      alert('Produto cadastrado com sucesso!');
-      e.target.reset();
+      alert(id ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!');
+      cancelarEdicao();
+      carregarProdutos();
     });
+
+    function prepararEdicao(p) {
+      document.getElementById('produto-id').value = p.id || p._id;
+      document.getElementById('nome').value = p.nome || '';
+      document.getElementById('categoria').value = p.categoria || 'lacticinios';
+      document.getElementById('preco').value = p.preco || '';
+      document.getElementById('foto').value = p.foto || '';
+      document.getElementById('obs').value = p.obs || '';
+      document.getElementById('promocao').checked = !!p.promocao;
+
+      document.getElementById('btn-submit').innerText = 'Salvar Alterações';
+      document.getElementById('btn-cancelar').style.display = 'block';
+    }
+
+    function cancelarEdicao() {
+      document.getElementById('form-produto').reset();
+      document.getElementById('produto-id').value = '';
+      document.getElementById('btn-submit').innerText = 'Adicionar Produto';
+      document.getElementById('btn-cancelar').style.display = 'none';
+    }
+
+    async function excluirProduto(id) {
+      if (confirm('Deseja realmente excluir este produto?')) {
+        await fetch(`/api/produtos/${id}`, { method: 'DELETE' });
+        carregarProdutos();
+      }
+    }
 
     socket.on('pedido_recebido_comercio', (pedido) => {
       renderizarPedido(pedido);
@@ -149,6 +215,7 @@
     });
 
     carregarPedidos();
+    carregarProdutos();
   </script>
 </body>
 </html>

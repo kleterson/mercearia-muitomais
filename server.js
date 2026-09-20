@@ -100,6 +100,38 @@ app.post('/api/produtos', async (req, res) => {
   }
 });
 
+app.put('/api/produtos/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nome, categoria, preco, foto, promocao, obs } = req.body;
+  try {
+    const [produtoAtualizado] = await sql`
+      UPDATE produtos 
+      SET nome = ${nome}, categoria = ${categoria}, preco = ${parseFloat(preco)}, foto = ${foto}, promocao = ${Boolean(promocao)}, obs = ${obs}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    const todosProdutos = await sql`SELECT * FROM produtos`;
+    io.emit('produtos_atualizados', todosProdutos);
+    res.json(produtoAtualizado);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensagem: 'Erro ao atualizar produto' });
+  }
+});
+
+app.delete('/api/produtos/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await sql`DELETE FROM produtos WHERE id = ${id}`;
+    const todosProdutos = await sql`SELECT * FROM produtos`;
+    io.emit('produtos_atualizados', todosProdutos);
+    res.json({ mensagem: 'Produto excluído com sucesso' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensagem: 'Erro ao excluir produto' });
+  }
+});
+
 // Rota de busca de pedidos
 app.get('/api/pedidos', async (req, res) => {
   const { usuario } = req.query;
