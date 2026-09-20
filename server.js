@@ -15,6 +15,11 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
+// Quando alguém entrar no site principal sem caminho nenhum, abre o login ou o mercado
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html')); // ou 'index.html' se preferir que abram direto no mercado
+});
+
 app.get('/mercado', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
